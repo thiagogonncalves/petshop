@@ -34,6 +34,8 @@ class Sale(models.Model):
         blank=True,
         verbose_name='Cliente'
     )
+    is_walk_in = models.BooleanField(default=False, verbose_name='Venda avulsa')
+    cpf = models.CharField(max_length=14, blank=True, verbose_name='CPF (auditoria avulsa)')
     sale_date = models.DateTimeField(auto_now_add=True, verbose_name='Data da Venda')
     subtotal = models.DecimalField(
         max_digits=10,
@@ -85,10 +87,12 @@ class Sale(models.Model):
             models.Index(fields=['sale_date']),
             models.Index(fields=['status']),
             models.Index(fields=['payment_method']),
+            models.Index(fields=['created_by']),
         ]
 
     def __str__(self):
-        return f"Venda #{self.id} - {self.client.name} - R$ {self.total}"
+        name = self.client.name if self.client else ('Avulsa' if self.is_walk_in else '-')
+        return f"Venda #{self.id} - {name} - R$ {self.total}"
 
     def calculate_total(self):
         """Calculate total from items"""
@@ -176,6 +180,10 @@ class SaleItem(models.Model):
         verbose_name = 'Item de Venda'
         verbose_name_plural = 'Itens de Venda'
         ordering = ['id']
+        indexes = [
+            models.Index(fields=['sale']),
+            models.Index(fields=['product']),
+        ]
 
     def __str__(self):
         item_name = self.product.name if self.product else self.service.name

@@ -13,7 +13,7 @@
                 <svg class="w-10 h-10 text-blue-700 -ml-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
                 </svg>
-                <h1 class="text-2xl font-bold text-blue-800">Happy Pets</h1>
+                <h1 class="text-2xl font-bold text-blue-800">GB PET</h1>
               </div>
             </div>
             <div class="hidden sm:ml-8 sm:flex sm:space-x-6">

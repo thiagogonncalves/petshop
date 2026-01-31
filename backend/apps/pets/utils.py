@@ -46,11 +46,11 @@ def generate_pet_card(pet):
     inner_y = y_start + card_height - inner_padding
     current_y = inner_y
     
-    # Title "Happy Pets"
+    # Title "GB PET"
     c.setFillColor(colors.HexColor('#1e40af'))
     c.setFont("Helvetica-Bold", 16)
-    title_width = c.stringWidth('Happy Pets', 'Helvetica-Bold', 16)
-    c.drawString(inner_x + (card_width - 2*inner_padding - title_width) / 2, current_y, 'Happy Pets')
+    title_width = c.stringWidth('GB PET', 'Helvetica-Bold', 16)
+    c.drawString(inner_x + (card_width - 2*inner_padding - title_width) / 2, current_y, 'GB PET')
     current_y -= 8*mm
     
     # Subtitle

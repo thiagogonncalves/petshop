@@ -1,258 +1,302 @@
 """
-Reports views
+Reports views — read-only endpoints. All date filters use start/end (YYYY-MM-DD).
+Default status: paid; use status= to include cancelled or other.
 """
-from rest_framework import viewsets, status
+import csv
+from io import StringIO
+from datetime import date, timedelta
+from django.http import HttpResponse
+from django.utils import timezone
+from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from datetime import datetime, timedelta
-from django.db.models import Sum, Count, Q, F
-from django.db.models.functions import TruncDate, TruncMonth
-from apps.sales.models import Sale
-from apps.products.models import Product, StockMovement
-from apps.clients.models import Client
-from apps.pets.models import Pet
-from apps.scheduling.models import Appointment
+from rest_framework.pagination import PageNumberPagination
+
+from apps.reports.services.queries import (
+    dashboard_data,
+    sales_report_queryset,
+    products_sold,
+    sales_ranking,
+    low_stock,
+    abc_products,
+    services_sold,
+    top_clients,
+    sales_heatmap,
+    profit_by_product,
+    get_sellers,
+)
+from apps.reports.serializers import ReportSaleListSerializer
 
 
-class ReportViewSet(viewsets.ViewSet):
-    """
-    ViewSet for Reports
-    """
+def _parse_params(request):
+    start = request.query_params.get('start')
+    end = request.query_params.get('end')
+    if end:
+        try:
+            end = date.fromisoformat(end)
+        except ValueError:
+            end = timezone.now().date()
+    else:
+        end = timezone.now().date()
+    if start:
+        try:
+            start = date.fromisoformat(start)
+        except ValueError:
+            start = end - timedelta(days=30)
+    else:
+        start = end - timedelta(days=30)
+    return start, end
+
+
+class ReportPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
+# ---------- Dashboard ----------
+class SellersReportView(APIView):
+    """List of users that have created sales (for filter dropdowns)."""
     permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'])
-    def sales_summary(self, request):
-        """Sales summary by period"""
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        
-        if not start_date:
-            start_date = (timezone.now() - timedelta(days=30)).date()
-        else:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        
-        if not end_date:
-            end_date = timezone.now().date()
-        else:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        
-        sales = Sale.objects.filter(
-            sale_date__date__gte=start_date,
-            sale_date__date__lte=end_date
-        )
-        
-        total_sales = sales.aggregate(
-            total=Sum('total'),
-            count=Count('id')
-        )
-        
-        by_status = sales.values('status').annotate(
-            total=Sum('total'),
-            count=Count('id')
-        )
-        
-        by_payment_method = sales.values('payment_method').annotate(
-            total=Sum('total'),
-            count=Count('id')
-        )
-        
-        daily_sales = sales.annotate(date=TruncDate('sale_date')).values('date').annotate(
-            total=Sum('total'),
-            count=Count('id')
-        ).order_by('date')
-        
-        return Response({
-            'period': {
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat()
-            },
-            'summary': total_sales,
-            'by_status': list(by_status),
-            'by_payment_method': list(by_payment_method),
-            'daily_sales': list(daily_sales)
-        })
+    def get(self, request):
+        data = get_sellers()
+        return Response(data)
 
-    @action(detail=False, methods=['get'])
-    def inventory_status(self, request):
-        """Inventory status report"""
-        products = Product.objects.filter(is_active=True)
-        
-        low_stock = products.filter(
-            stock_quantity__lte=F('min_stock')
-        ).values('id', 'name', 'stock_quantity', 'min_stock')
-        
-        out_of_stock = products.filter(stock_quantity=0).values('id', 'name')
-        
-        total_value = sum(p.stock_quantity * p.cost_price for p in products)
-        
-        return Response({
-            'total_products': products.count(),
-            'low_stock_count': low_stock.count(),
-            'out_of_stock_count': out_of_stock.count(),
-            'total_inventory_value': float(total_value),
-            'low_stock_items': list(low_stock),
-            'out_of_stock_items': list(out_of_stock)
-        })
 
-    @action(detail=False, methods=['get'])
-    def top_products(self, request):
-        """Top selling products"""
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        
-        if start_date:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        else:
-            start_date = (timezone.now() - timedelta(days=30)).date()
-        
-        if end_date:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        else:
-            end_date = timezone.now().date()
-        
-        from apps.sales.models import SaleItem
-        
-        top_products = SaleItem.objects.filter(
-            item_type='product',
-            sale__sale_date__date__gte=start_date,
-            sale__sale_date__date__lte=end_date,
-            sale__status='paid'
-        ).values('product__name').annotate(
-            total_quantity=Sum('quantity'),
-            total_revenue=Sum('total')
-        ).order_by('-total_revenue')[:10]
-        
-        return Response({
-            'period': {
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat()
-            },
-            'top_products': list(top_products)
-        })
+class DashboardReportView(APIView):
+    permission_classes = [IsAuthenticated]
 
-    @action(detail=False, methods=['get'])
-    def clients_summary(self, request):
-        """Clients summary"""
-        total_clients = Client.objects.filter(is_active=True).count()
-        clients_with_sales = Client.objects.filter(
-            is_active=True,
-            sales__isnull=False
-        ).distinct().count()
-        
-        top_clients = Client.objects.filter(
-            is_active=True
-        ).annotate(
-            total_sales=Sum('sales__total'),
-            sales_count=Count('sales')
-        ).order_by('-total_sales')[:10]
-        
-        return Response({
-            'total_clients': total_clients,
-            'clients_with_sales': clients_with_sales,
-            'top_clients': [
-                {
-                    'id': c.id,
-                    'name': c.name,
-                    'total_sales': float(c.total_sales or 0),
-                    'sales_count': c.sales_count
-                }
-                for c in top_clients
-            ]
-        })
-
-    @action(detail=False, methods=['get'])
-    def appointments_summary(self, request):
-        """Appointments summary"""
-        start_date = request.query_params.get('start_date')
-        end_date = request.query_params.get('end_date')
-        
-        if start_date:
-            start_date = datetime.strptime(start_date, '%Y-%m-%d').date()
-        else:
-            start_date = (timezone.now() - timedelta(days=30)).date()
-        
-        if end_date:
-            end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
-        else:
-            end_date = timezone.now().date()
-        
-        appointments = Appointment.objects.filter(
-            scheduled_date__date__gte=start_date,
-            scheduled_date__date__lte=end_date
+    def get(self, request):
+        start, end = _parse_params(request)
+        user_id = request.query_params.get('user_id') or None
+        payment_method = request.query_params.get('payment_method') or None
+        status_filter = request.query_params.get('status') or 'paid'
+        data = dashboard_data(
+            start=start, end=end,
+            user_id=user_id,
+            payment_method=payment_method,
+            status=status_filter,
         )
-        
-        by_status = appointments.values('status').annotate(count=Count('id'))
-        
-        by_service = appointments.values('service__name').annotate(
-            count=Count('id')
-        ).order_by('-count')[:10]
-        
-        return Response({
-            'period': {
-                'start_date': start_date.isoformat(),
-                'end_date': end_date.isoformat()
-            },
-            'total': appointments.count(),
-            'by_status': list(by_status),
-            'by_service': list(by_service)
-        })
+        # Serialize decimals for JSON
+        def _serialize(obj):
+            if hasattr(obj, 'isoformat'):
+                return obj.isoformat()
+            if hasattr(obj, '__float__'):
+                return float(obj)
+            if isinstance(obj, dict):
+                return {k: _serialize(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple)):
+                return [_serialize(x) for x in obj]
+            return obj
+        data = _serialize(data)
+        return Response(data)
 
-    @action(detail=False, methods=['get'])
-    def dashboard(self, request):
-        """Dashboard summary"""
-        today = timezone.now().date()
-        this_month_start = today.replace(day=1)
-        
-        # Sales
-        today_sales = Sale.objects.filter(sale_date__date=today).aggregate(
-            total=Sum('total'),
-            count=Count('id')
+
+# ---------- Sales list (paginated) ----------
+class SalesReportView(APIView):
+    permission_classes = [IsAuthenticated]
+    pagination_class = ReportPagination
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        user_id = request.query_params.get('user_id') or None
+        client_id = request.query_params.get('client_id') or None
+        status_filter = request.query_params.get('status')
+        search = request.query_params.get('q') or None
+        exclude_cancelled = request.query_params.get('include_cancelled', 'false').lower() != 'true'
+        qs = sales_report_queryset(
+            start=start, end=end,
+            user_id=user_id, client_id=client_id,
+            status=status_filter,
+            search=search,
+            exclude_cancelled=exclude_cancelled,
         )
-        
-        month_sales = Sale.objects.filter(
-            sale_date__date__gte=this_month_start
-        ).aggregate(
-            total=Sum('total'),
-            count=Count('id')
-        )
-        
-        # Appointments
-        today_appointments = Appointment.objects.filter(
-            scheduled_date__date=today,
-            status__in=['scheduled', 'in_progress']
-        ).count()
-        
-        upcoming_appointments = Appointment.objects.filter(
-            scheduled_date__gte=timezone.now(),
-            status__in=['scheduled', 'in_progress']
-        ).count()
-        
-        # Inventory
-        low_stock_count = Product.objects.filter(
-            is_active=True,
-            stock_quantity__lte=F('min_stock')
-        ).count()
-        
-        # Clients
-        total_clients = Client.objects.filter(is_active=True).count()
-        total_pets = Pet.objects.filter(is_active=True).count()
-        
-        return Response({
-            'sales': {
-                'today': today_sales,
-                'this_month': month_sales
-            },
-            'appointments': {
-                'today': today_appointments,
-                'upcoming': upcoming_appointments
-            },
-            'inventory': {
-                'low_stock_count': low_stock_count
-            },
-            'clients': {
-                'total': total_clients,
-                'total_pets': total_pets
-            }
-        })
+        paginator = self.pagination_class()
+        page = paginator.paginate_queryset(qs, request)
+        serializer = ReportSaleListSerializer(page, many=True)
+        return paginator.get_paginated_response(serializer.data)
+
+
+# ---------- Products sold ----------
+class ProductsSoldReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        category_id = request.query_params.get('category_id') or None
+        order = request.query_params.get('order') or 'revenue'
+        limit = min(int(request.query_params.get('limit') or 100), 500)
+        data = products_sold(start=start, end=end, category_id=category_id, order=order, limit=limit)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+# ---------- Sales ranking ----------
+class SalesRankingReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        order = request.query_params.get('order') or 'revenue'
+        limit = min(int(request.query_params.get('limit') or 20), 100)
+        data = sales_ranking(start=start, end=end, order=order, limit=limit)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+# ---------- Low stock ----------
+class LowStockReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        threshold = request.query_params.get('threshold')
+        if threshold is not None:
+            try:
+                threshold = int(threshold)
+            except ValueError:
+                threshold = None
+        data = low_stock(threshold=threshold)
+        data = [dict(r) for r in data]
+        for r in data:
+            r['category_name'] = r.pop('category__name', None)
+        return Response({'results': data})
+
+
+# ---------- ABC products ----------
+class ABCProductsReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        metric = request.query_params.get('metric') or 'revenue'
+        data = abc_products(start=start, end=end, metric=metric)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+# ---------- Services sold ----------
+class ServicesSoldReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        data = services_sold(start=start, end=end)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+# ---------- Top clients ----------
+class TopClientsReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        order = request.query_params.get('order') or 'revenue'
+        limit = min(int(request.query_params.get('limit') or 20), 100)
+        data = top_clients(start=start, end=end, order=order, limit=limit)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+# ---------- Sales heatmap ----------
+class SalesHeatmapReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        data = sales_heatmap(start=start, end=end)
+        data['data'] = _serialize_decimals(data['data'])
+        return Response(data)
+
+
+# ---------- Profit by product ----------
+class ProfitByProductReportView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        data = profit_by_product(start=start, end=end)
+        data = _serialize_decimals(data)
+        return Response({'results': data, 'period': {'start': start.isoformat(), 'end': end.isoformat()}})
+
+
+def _serialize_decimals(obj):
+    from decimal import Decimal
+    if isinstance(obj, Decimal):
+        return float(obj)
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _serialize_decimals(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_serialize_decimals(x) for x in obj]
+    return obj
+
+
+# ---------- CSV Exports ----------
+class SalesExportCSVView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        user_id = request.query_params.get('user_id') or None
+        client_id = request.query_params.get('client_id') or None
+        status_filter = request.query_params.get('status')
+        exclude_cancelled = request.query_params.get('include_cancelled', 'false').lower() != 'true'
+        qs = sales_report_queryset(
+            start=start, end=end,
+            user_id=user_id, client_id=client_id,
+            status=status_filter,
+            exclude_cancelled=exclude_cancelled,
+        )[:5000]
+        buffer = StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow([
+            'ID', 'Data', 'Vendedor', 'Cliente', 'Total', 'Forma Pagamento', 'Status'
+        ])
+        for s in qs:
+            client_name = s.client.name if s.client else ('Avulsa' if s.is_walk_in else '-')
+            writer.writerow([
+                s.id,
+                s.sale_date.strftime('%Y-%m-%d %H:%M') if s.sale_date else '',
+                s.created_by.username if s.created_by else '',
+                client_name,
+                str(s.total),
+                s.get_payment_method_display(),
+                s.get_status_display(),
+            ])
+        response = HttpResponse(buffer.getvalue(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="vendas_{start}_{end}.csv"'
+        return response
+
+
+class ProductsSoldExportCSVView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        start, end = _parse_params(request)
+        category_id = request.query_params.get('category_id') or None
+        order = request.query_params.get('order') or 'revenue'
+        data = products_sold(start=start, end=end, category_id=category_id, order=order, limit=1000)
+        buffer = StringIO()
+        writer = csv.writer(buffer)
+        writer.writerow([
+            'ID Produto', 'Nome', 'Categoria', 'Qtd Vendida', 'Receita', 'Preço Médio', 'Lucro Est.', 'Participação %'
+        ])
+        for r in data:
+            writer.writerow([
+                r.get('product_id'),
+                r.get('name'),
+                r.get('category_name'),
+                r.get('quantity_total'),
+                r.get('revenue_total'),
+                r.get('avg_price'),
+                r.get('estimated_profit'),
+                r.get('share_percent'),
+            ])
+        response = HttpResponse(buffer.getvalue(), content_type='text/csv; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="produtos_vendidos_{start}_{end}.csv"'
+        return response

@@ -202,3 +202,7 @@ LOGGING = {
         'level': 'INFO',
     },
 }
+
+# NF-e: importação por chave de acesso (opcional)
+# Ex: "https://api.exemplo.com/nfe/{access_key}/xml"
+NFE_FETCH_XML_URL_TEMPLATE = config('NFE_FETCH_XML_URL_TEMPLATE', default='')

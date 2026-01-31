@@ -119,7 +119,7 @@ class Command(BaseCommand):
         for prod_data in products_data:
             Product.objects.get_or_create(
                 name=prod_data['name'],
-                defaults=prod_data
+                defaults={**prod_data, 'price_manually_set': True, 'profit_margin': 0}
             )
 
     def create_services(self):

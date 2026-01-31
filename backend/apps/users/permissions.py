@@ -6,9 +6,13 @@ from .models import UserRole
 
 
 class IsAdmin(permissions.BasePermission):
-    """Only admin users"""
+    """Only admin users: role=admin, or is_superuser, or is_staff (Django superuser)."""
     def has_permission(self, request, view):
-        return request.user and request.user.is_authenticated and request.user.role == UserRole.ADMIN
+        if not (request.user and request.user.is_authenticated):
+            return False
+        if getattr(request.user, 'is_superuser', False) or getattr(request.user, 'is_staff', False):
+            return True
+        return request.user.role == UserRole.ADMIN
 
 
 class IsAdminOrManager(permissions.BasePermission):

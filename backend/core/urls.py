@@ -21,6 +21,7 @@ urlpatterns = [
     
     # API Routes
     path('api/auth/', include('apps.users.urls')),
+    path('api/admin/', include('apps.users.admin_urls')),
     path('api/clients/', include('apps.clients.urls')),
     path('api/pets/', include('apps.pets.urls')),
     path('api/products/', include('apps.products.urls')),
@@ -29,6 +30,7 @@ urlpatterns = [
     path('api/sales/', include('apps.sales.urls')),
     path('api/reports/', include('apps.reports.urls')),
     path('api/integrations/', include('apps.integrations.urls')),
+    path('api/nfe/', include('apps.integrations.nfe.urls')),
 ]
 
 if settings.DEBUG:

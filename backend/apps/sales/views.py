@@ -1,15 +1,18 @@
 """
 Sales views
 """
+import re
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import transaction
 from datetime import datetime, timedelta
 from .models import Sale, SaleItem, Receipt, Invoice
 from .serializers import (
     SaleSerializer, SaleCreateSerializer,
-    SaleItemSerializer, ReceiptSerializer, InvoiceSerializer
+    SaleItemSerializer, ReceiptSerializer, InvoiceSerializer,
+    PdvSaleCreateSerializer,
 )
 
 
@@ -121,6 +124,119 @@ class SaleViewSet(viewsets.ModelViewSet):
         )
         serializer = InvoiceSerializer(invoice)
         return Response(serializer.data)
+
+    @action(detail=False, methods=['post'], url_path='pdv')
+    def pdv_create(self, request):
+        """
+        PDV: create and finalize sale in one request.
+        Body: { cpf?, is_walk_in, items: [{product_id, quantity, unit_price}], payment_method }
+        Creates sale (status=paid), deducts stock in transaction.
+        """
+        serializer = PdvSaleCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        cpf_raw = (data.get('cpf') or '').strip()
+        cpf_digits = re.sub(r'[^0-9]', '', cpf_raw)
+        is_walk_in = data.get('is_walk_in', True)
+        items_data = data['items']
+        payment_method = data['payment_method']
+
+        client = None
+        cpf_saved = ''
+        if not is_walk_in and cpf_digits:
+            from apps.clients.models import Client
+            client = Client.objects.filter(is_active=True, document_type='cpf', document=cpf_digits).first()
+            if not client:
+                return Response(
+                    {'cpf': 'Cliente não encontrado com este CPF. Cadastre o cliente ou marque Venda avulsa.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        if is_walk_in and cpf_digits:
+            cpf_saved = cpf_digits
+
+        from apps.products.models import Product, StockMovement
+
+        with transaction.atomic():
+            sale = Sale.objects.create(
+                client=client,
+                is_walk_in=is_walk_in,
+                cpf=cpf_saved,
+                discount=0,
+                total=0,
+                payment_method=payment_method,
+                status='paid',
+                created_by=request.user,
+            )
+            for item_data in items_data:
+                product = Product.objects.select_for_update().filter(pk=item_data['product_id']).first()
+                if not product:
+                    return Response(
+                        {'items': f'Produto id {item_data["product_id"]} não encontrado.'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                qty = item_data['quantity']
+                if product.stock_quantity < qty:
+                    return Response(
+                        {'items': f'Estoque insuficiente para {product.name}. Disponível: {product.stock_quantity}'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                unit_price = item_data['unit_price']
+                SaleItem.objects.create(
+                    sale=sale,
+                    item_type='product',
+                    product=product,
+                    quantity=qty,
+                    unit_price=unit_price,
+                    discount=0,
+                )
+                prev = product.stock_quantity
+                product.stock_quantity = prev - qty
+                product.save(update_fields=['stock_quantity'])
+                StockMovement.objects.create(
+                    product=product,
+                    movement_type='exit',
+                    quantity=qty,
+                    previous_stock=prev,
+                    new_stock=product.stock_quantity,
+                    reference=f'Venda #{sale.id}',
+                    observation=f'Saída por venda PDV #{sale.id}',
+                    created_by=request.user,
+                )
+            sale.calculate_total()
+            sale.save()
+
+        out = SaleSerializer(sale)
+        return Response(out.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['get'], url_path='receipt')
+    def receipt(self, request, pk=None):
+        """Return structured data for thermal receipt (80mm)."""
+        sale = self.get_object()
+        items = []
+        for item in sale.items.all():
+            name = (item.product.name if item.product else (item.service.name if item.service else '-'))
+            items.append({
+                'name': name,
+                'quantity': item.quantity,
+                'unit_price': str(item.unit_price),
+                'total': str(item.total),
+            })
+        client_label = 'Venda avulsa'
+        if sale.client:
+            client_label = f'{sale.client.name} - CPF: {sale.cpf or sale.client.document}'
+        elif sale.cpf:
+            client_label = f'CPF: {sale.cpf} (avulsa)'
+        payload = {
+            'sale_id': sale.id,
+            'sale_date': sale.sale_date.isoformat() if sale.sale_date else None,
+            'items': items,
+            'subtotal': str(sale.subtotal),
+            'discount': str(sale.discount),
+            'total': str(sale.total),
+            'client': client_label,
+            'payment_method': sale.get_payment_method_display(),
+        }
+        return Response(payload)
 
 
 class SaleItemViewSet(viewsets.ModelViewSet):

@@ -1,6 +1,7 @@
 """
 Sales serializers
 """
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Sale, SaleItem, Receipt, Invoice
 
@@ -116,3 +117,31 @@ class InvoiceSerializer(serializers.ModelSerializer):
         model = Invoice
         fields = ['id', 'sale', 'sale_data', 'invoice_number', 'issued_at', 'pdf_file']
         read_only_fields = ['id', 'invoice_number', 'issued_at']
+
+
+class PdvSaleItemInputSerializer(serializers.Serializer):
+    """Input for PDV sale item (product only)."""
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+    unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
+
+
+class PdvSaleCreateSerializer(serializers.Serializer):
+    """Create and finalize a PDV sale in one request."""
+    cpf = serializers.CharField(required=False, allow_blank=True)
+    is_walk_in = serializers.BooleanField(default=False)
+    items = PdvSaleItemInputSerializer(many=True)
+    payment_method = serializers.ChoiceField(choices=Sale.PAYMENT_METHOD_CHOICES)
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError('Pelo menos um item é obrigatório.')
+        return value
+
+    def validate(self, attrs):
+        if not attrs.get('is_walk_in'):
+            cpf = (attrs.get('cpf') or '').strip()
+            cpf_digits = ''.join(c for c in cpf if c.isdigit())
+            if len(cpf_digits) != 11:
+                raise serializers.ValidationError({'cpf': 'Informe um CPF válido (11 dígitos) ou marque Venda avulsa.'})
+        return attrs
