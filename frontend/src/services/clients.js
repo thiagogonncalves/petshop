@@ -24,4 +24,14 @@ export const clientsService = {
   getPets(clientId) {
     return api.get(`/clients/${clientId}/pets/`)
   },
+
+  /** PDV: get client by CPF (digits only) */
+  byCpf(cpf) {
+    return api.get('/clients/by-cpf/', { params: { cpf: cpf || '' } })
+  },
+
+  /** Histórico de crediários do cliente */
+  getCredits(clientId) {
+    return api.get(`/clients/${clientId}/credits/`)
+  },
 }

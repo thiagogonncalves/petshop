@@ -405,6 +405,75 @@ Content-Type: application/json
 }
 ```
 
+## 📊 Relatórios (módulo Reports)
+
+Todos os endpoints de relatórios exigem autenticação (`Authorization: Bearer {token}`). Datas no formato `YYYY-MM-DD`. Por padrão, vendas consideradas são apenas **pagas** (`status=paid`); use `include_cancelled=true` ou `status=` para incluir canceladas/outros.
+
+### Vendedores (filtros)
+
+```bash
+GET /api/reports/sellers/
+```
+
+Retorna lista de usuários que têm vendas (para dropdown de filtro).
+
+### Dashboard (KPIs)
+
+```bash
+GET /api/reports/dashboard/?start=2025-01-01&end=2025-01-27&user_id=&payment_method=&status=paid
+```
+
+**Resposta:** `total_sales`, `total_revenue`, `ticket_avg`, `total_items_sold`, `estimated_profit`, `sales_by_day`, `sales_by_payment_method`, `top_5_products`, `top_5_clients`, `period`.
+
+### Relatório de vendas (lista paginada)
+
+```bash
+GET /api/reports/sales/?start=2025-01-01&end=2025-01-27&page=1&page_size=20&user_id=&client_id=&status=&q=&include_cancelled=false
+```
+
+**Resposta:** `{ count, next, previous, results: [ { id, sale_date, created_by_name, client_name, total, payment_method, status, ... } ] }`.
+
+### Produtos vendidos
+
+```bash
+GET /api/reports/products-sold/?start=2025-01-01&end=2025-01-27&category_id=&order=revenue&limit=100
+```
+
+`order`: `revenue` | `qty` | `profit`. **Resposta:** `results`: lista com `product_id`, `name`, `quantity_total`, `revenue_total`, `avg_price`, `estimated_profit`, `share_percent`.
+
+### Ranking de vendedores
+
+```bash
+GET /api/reports/sales-ranking/?start=2025-01-01&end=2025-01-27&order=revenue&limit=20
+```
+
+`order`: `revenue` | `count` | `items`. **Resposta:** `results`: lista com `user_id`, `name`, `total_sales`, `items_sold`, `revenue`, `ticket_avg`, `cancellation_rate`.
+
+### Estoque baixo
+
+```bash
+GET /api/reports/low-stock/?threshold=5
+```
+
+Sem `threshold`: usa estoque mínimo do produto. **Resposta:** `results`: produto, saldo, mínimo, sugestão de reposição.
+
+### Top clientes
+
+```bash
+GET /api/reports/top-clients/?start=2025-01-01&end=2025-01-27&order=revenue&limit=20
+```
+
+### Exportação CSV
+
+```bash
+GET /api/reports/sales/export.csv?start=2025-01-01&end=2025-01-27
+GET /api/reports/products-sold/export.csv?start=2025-01-01&end=2025-01-27&order=revenue
+```
+
+Retornam arquivo CSV com `Content-Disposition: attachment; filename="..."`.
+
+---
+
 ## 📝 Filtros e Busca
 
 ### Filtros Comuns

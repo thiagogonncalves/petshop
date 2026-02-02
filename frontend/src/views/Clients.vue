@@ -41,6 +41,9 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <router-link :to="{ name: 'ClientCredits', params: { clientId: client.id } }" class="text-orange-600 hover:text-orange-800 mr-4">
+                Crediário
+              </router-link>
               <button @click="openModal(client)" class="text-blue-600 hover:text-blue-800 mr-4">Editar</button>
               <button @click="deleteClient(client.id)" class="text-red-600 hover:text-red-900">Excluir</button>
             </td>

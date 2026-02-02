@@ -28,4 +28,14 @@ export const salesService = {
   generateInvoice(id) {
     return api.post(`/sales/sales/${id}/generate_invoice/`)
   },
+
+  /** PDV: create and finalize sale (items, cpf/is_walk_in, payment_method) */
+  pdvCreate(data) {
+    return api.post('/sales/sales/pdv/', data)
+  },
+
+  /** PDV: get receipt data for thermal printing */
+  getReceipt(saleId) {
+    return api.get(`/sales/sales/${saleId}/receipt/`)
+  },
 }

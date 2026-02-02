@@ -30,7 +30,7 @@
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-for="appointment in appointments" :key="appointment.id">
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDateTime(appointment.scheduled_date) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatDateTime(appointment.start_at || appointment.scheduled_date) }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ appointment.client_name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ appointment.pet_name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ appointment.service_name }}</td>
@@ -87,7 +87,7 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Serviço</label>
-              <select v-model="form.service" required
+              <select v-model="form.service" required @change="onServiceChange"
                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
                 <option value="">Selecione...</option>
                 <option v-for="service in services" :key="service.id" :value="service.id">{{ service.name }}</option>
@@ -95,9 +95,32 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Data e Hora</label>
-              <input v-model="form.scheduled_date" type="datetime-local" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+              <input v-model="formDate" type="date" :min="minDate"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                     @change="onDateChange">
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+              <button v-if="form.service && formDate" type="button"
+                      @click="loadSlots(editingAppointment?.id)"
+                      class="mb-3 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 text-sm">
+                {{ loadingSlots ? 'Carregando...' : 'Ver horários disponíveis' }}
+              </button>
+              <div v-if="loadingSlots" class="text-sm text-gray-500 py-2">Carregando horários...</div>
+              <div v-else-if="slots.length === 0 && form.service && formDate && slotsLoaded" 
+                   class="text-amber-700 bg-amber-50 p-4 rounded-xl text-sm">
+                Nenhum horário disponível nesta data. Escolha outra data.
+              </div>
+              <div v-else-if="slots.length > 0" class="grid grid-cols-3 gap-2">
+                <button v-for="slot in slots" :key="slot" type="button"
+                        @click="selectSlot(slot)"
+                        class="py-3 rounded-xl font-medium transition-colors"
+                        :class="formTime === slot ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-800 hover:bg-orange-100'">
+                  {{ slot }}
+                </button>
+              </div>
             </div>
 
             <div class="md:col-span-2">
@@ -124,11 +147,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { schedulingService } from '@/services/scheduling'
 import { clientsService } from '@/services/clients'
 import { petsService } from '@/services/pets'
 import { servicesService } from '@/services/services'
+import { bookingService } from '@/services/booking'
 
 const appointments = ref([])
 const clients = ref([])
@@ -145,6 +169,14 @@ const form = ref({
   observations: '',
   status: 'scheduled',
 })
+
+const formDate = ref('')
+const formTime = ref('')
+const slots = ref([])
+const loadingSlots = ref(false)
+const slotsLoaded = ref(false)
+
+const minDate = computed(() => new Date().toISOString().slice(0, 10))
 
 const loadAppointments = async () => {
   try {
@@ -189,13 +221,58 @@ const loadClientPets = async () => {
   }
 }
 
-const openModal = (appointment = null) => {
+function onDateChange() {
+  formTime.value = ''
+  slots.value = []
+  slotsLoaded.value = false
+}
+
+function onServiceChange() {
+  formTime.value = ''
+  slots.value = []
+  slotsLoaded.value = false
+}
+
+async function loadSlots(excludeAppointmentId = null) {
+  if (!form.value.service || !formDate.value) return
+  loadingSlots.value = true
+  slots.value = []
+  slotsLoaded.value = false
+  try {
+    const res = await bookingService.getAvailableSlots(
+      form.value.service, formDate.value, excludeAppointmentId
+    )
+    slots.value = res.data.slots || []
+  } catch {
+    slots.value = []
+  } finally {
+    loadingSlots.value = false
+    slotsLoaded.value = true
+  }
+}
+
+function selectSlot(slot) {
+  formTime.value = slot
+  form.value.scheduled_date = `${formDate.value}T${slot}:00`
+}
+
+const openModal = async (appointment = null) => {
   editingAppointment.value = appointment
+  formDate.value = ''
+  formTime.value = ''
+  slots.value = []
+  slotsLoaded.value = false
   if (appointment) {
     form.value = { ...appointment }
-    if (form.value.scheduled_date) {
-      const date = new Date(form.value.scheduled_date)
+    const dt = form.value.start_at || form.value.scheduled_date
+    if (dt) {
+      const date = new Date(dt)
+      formDate.value = date.toISOString().slice(0, 10)
+      formTime.value = date.toTimeString().slice(0, 5)
       form.value.scheduled_date = date.toISOString().slice(0, 16)
+      if (form.value.service && formDate.value) {
+        await loadSlots(editingAppointment.value?.id)
+      }
     }
     if (form.value.client) {
       loadClientPets()
@@ -220,12 +297,21 @@ const closeModal = () => {
 }
 
 const saveAppointment = async () => {
+  if (!formTime.value && form.value.service && formDate.value) {
+    alert('Clique em "Ver horários disponíveis" e selecione um horário.')
+    return
+  }
+  if (form.value.service && formDate.value && !formTime.value) {
+    alert('Selecione um horário disponível.')
+    return
+  }
   try {
     const data = {
       ...form.value,
       client: parseInt(form.value.client),
       pet: parseInt(form.value.pet),
       service: parseInt(form.value.service),
+      scheduled_date: form.value.scheduled_date || (formDate.value && formTime.value ? `${formDate.value}T${formTime.value}:00` : ''),
     }
     
     if (editingAppointment.value) {
@@ -237,8 +323,14 @@ const saveAppointment = async () => {
     closeModal()
   } catch (error) {
     console.error('Erro ao salvar agendamento:', error)
-    const errorMsg = error.response?.data?.details || error.response?.data?.error || 'Erro ao salvar agendamento'
-    alert(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg))
+    const data = error.response?.data || {}
+    let errorMsg = data.detail || data.details || data.error
+    if (!errorMsg && typeof data === 'object') {
+      const firstKey = Object.keys(data)[0]
+      const val = firstKey ? data[firstKey] : null
+      errorMsg = Array.isArray(val) ? val[0] : (val || 'Erro ao salvar agendamento')
+    }
+    alert(typeof errorMsg === 'string' ? errorMsg : (errorMsg ? JSON.stringify(errorMsg) : 'Erro ao salvar agendamento'))
   }
 }
 

@@ -7,33 +7,54 @@
         </svg>
         <h1 class="text-2xl font-bold text-blue-800">Produtos</h1>
       </div>
-      <button
-        @click="openModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
-      >
-        Novo Produto
-      </button>
+      <div class="flex gap-3">
+        <router-link
+          to="/nfe"
+          class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-md transition-colors inline-flex items-center"
+        >
+          Importar NF-e
+        </router-link>
+        <button
+          @click="openModal()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
+        >
+          Novo Produto
+        </button>
+      </div>
     </div>
 
     <!-- Tabela de Produtos -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 border-orange-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 border-orange-200">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="bg-gradient-to-r from-orange-400 to-orange-300">
           <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-14">Foto</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Código</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Categoria</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Custo</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Margem %</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Preço</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estoque</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            <th class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap sticky right-0 bg-orange-400 z-10">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
-          <tr v-for="product in products" :key="product.id">
+          <tr v-for="product in products" :key="product.id" class="hover:bg-orange-50/50">
+            <td class="px-2 py-2 whitespace-nowrap">
+              <div class="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden">
+                <img v-if="product.image_url" :src="product.image_url" :alt="product.name" class="w-full h-full object-cover" />
+                <svg v-else class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+              </div>
+            </td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.sku || '-' }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.category_name }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.cost_price) }}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.profit_margin ?? 0 }}%</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.sale_price) }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               <span :class="product.is_low_stock ? 'text-red-600 font-semibold' : 'text-gray-500'">
@@ -46,17 +67,34 @@
                 {{ product.is_active ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button @click="openModal(product)" class="text-blue-600 hover:text-blue-800 mr-4">Editar</button>
-              <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-900">Excluir</button>
+            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-right sticky right-0 bg-white z-10 border-l border-gray-200">
+              <button type="button" @click="openModal(product)" class="mr-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm">
+                Editar
+              </button>
+              <button type="button" @click="deleteProduct(product.id)" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium text-sm border border-red-200">
+                Excluir
+              </button>
             </td>
           </tr>
-          <tr v-if="products.length === 0">
-            <td colspan="8" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum produto encontrado</td>
+          <tr v-if="loading && products.length === 0">
+            <td colspan="10" class="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td>
+          </tr>
+          <tr v-else-if="!loading && products.length === 0">
+            <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum produto encontrado</td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <!-- Paginação -->
+    <Pagination
+      v-if="totalCount > 0"
+      :current-page="currentPage"
+      :total-pages="totalPages"
+      :total-items="totalCount"
+      :items-per-page="pageSize"
+      @page-change="goToPage"
+    />
 
     <!-- Modal de Produto -->
     <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeModal">
@@ -69,20 +107,52 @@
         </div>
         
         <form @submit.prevent="saveProduct">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Foto do produto</label>
+            <div class="flex items-start gap-4">
+              <div class="w-24 h-24 rounded-lg border-2 border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img v-if="imagePreviewUrl" :src="imagePreviewUrl" alt="Preview" class="w-full h-full object-cover" />
+                <svg v-else class="w-10 h-10 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+                </svg>
+              </div>
+              <div class="flex-1 min-w-0">
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept="image/*"
+                  class="block w-full text-sm text-gray-500 file:mr-2 file:py-2 file:px-4 file:rounded file:border-0 file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200"
+                  @change="onImageSelect"
+                />
+                <p class="text-xs text-gray-500 mt-1">PNG, JPG ou GIF. Opcional.</p>
+              </div>
+            </div>
+          </div>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
               <input v-model="form.name" type="text" required
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
+            <div class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Descrição (opcional)</label>
+              <textarea v-model="form.description" rows="2" placeholder="Descrição do produto"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+            </div>
 
             <div class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-              <select v-model="form.category" required
-                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-                <option value="">Selecione...</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-              </select>
+              <div class="flex gap-2">
+                <select v-model="form.category" required
+                        class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                  <option value="">Selecione...</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                </select>
+                <button type="button" @click="openCategoryModal()"
+                        class="px-3 py-2 text-orange-600 border border-orange-300 rounded-md hover:bg-orange-50 text-sm whitespace-nowrap">
+                  + Nova
+                </button>
+              </div>
             </div>
 
             <div>
@@ -104,9 +174,21 @@
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Margem de Lucro (%)</label>
+              <input v-model="form.profit_margin" type="number" step="0.5" min="0"
+                     :disabled="form.price_manually_set"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100">
+            </div>
+            <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Preço de Venda</label>
-              <input v-model="form.sale_price" type="number" step="0.01" min="0" required
+              <input v-model="form.sale_price" type="number" step="0.01" min="0.01" required
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="flex items-end pb-2">
+              <label class="flex items-center">
+                <input v-model="form.price_manually_set" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <span class="ml-2 text-sm text-gray-700">Preço definido manualmente (não recalcular pela margem)</span>
+              </label>
             </div>
           </div>
 
@@ -149,36 +231,123 @@
         </form>
       </div>
     </div>
+
+    <!-- Modal Nova Categoria -->
+    <div v-if="showCategoryModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeCategoryModal">
+      <div class="relative top-20 mx-auto p-6 border-2 border-orange-300 w-full max-w-md shadow-2xl rounded-xl bg-white">
+        <h3 class="text-xl font-bold text-blue-800 mb-4">Nova Categoria</h3>
+        <form @submit.prevent="saveCategory">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+            <input v-model="categoryForm.name" type="text" required placeholder="Ex: Rações"
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Descrição (opcional)</label>
+            <textarea v-model="categoryForm.description" rows="2" placeholder="Descrição da categoria"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+          </div>
+          <p v-if="categoryError" class="mb-2 text-sm text-red-600">{{ categoryError }}</p>
+          <div class="flex justify-end gap-3">
+            <button type="button" @click="closeCategoryModal"
+                    class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">
+              Cancelar
+            </button>
+            <button type="submit" class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600">
+              Salvar Categoria
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { productsService } from '@/services/products'
+import Pagination from '@/components/Pagination.vue'
 
 const products = ref([])
 const categories = ref([])
 const showModal = ref(false)
+const showCategoryModal = ref(false)
+const categoryError = ref('')
 const editingProduct = ref(null)
+const categoryForm = ref({ name: '', description: '' })
+const loading = ref(false)
+const currentPage = ref(1)
+const totalCount = ref(0)
+const pageSize = ref(20)
+
+const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)))
+
+const imageFile = ref(null)
+const imagePreviewUrl = ref(null)
+const fileInputRef = ref(null)
 
 const form = ref({
   name: '',
+  description: '',
   category: '',
+  sku: '',
+  barcode: '',
   cost_price: 0,
+  profit_margin: 0,
   sale_price: 0,
+  price_manually_set: false,
   stock_quantity: 0,
   min_stock: 0,
-  unit: 'un',
+  unit: 'UN',
   is_active: true,
 })
 
+function onImageSelect(e) {
+  const file = e.target.files?.[0]
+  imageFile.value = file || null
+  if (imagePreviewUrl.value && imagePreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreviewUrl.value)
+  }
+  imagePreviewUrl.value = null
+  if (file) {
+    imagePreviewUrl.value = URL.createObjectURL(file)
+  } else if (editingProduct.value?.image_url) {
+    imagePreviewUrl.value = editingProduct.value.image_url
+  }
+}
+
+function clearImagePreview() {
+  if (imagePreviewUrl.value && imagePreviewUrl.value.startsWith('blob:')) {
+    URL.revokeObjectURL(imagePreviewUrl.value)
+  }
+  imagePreviewUrl.value = null
+  imageFile.value = null
+}
+
 const loadProducts = async () => {
+  loading.value = true
   try {
-    const response = await productsService.getAll()
-    products.value = response.data.results || response.data
+    const response = await productsService.getAll({
+      page: currentPage.value,
+      page_size: pageSize.value,
+    })
+    const data = response.data
+    products.value = data.results ?? data
+    if (!Array.isArray(products.value)) products.value = []
+    totalCount.value = data.count ?? products.value.length
   } catch (error) {
     console.error('Erro ao carregar produtos:', error)
-    alert('Erro ao carregar produtos')
+    products.value = []
+    totalCount.value = 0
+  } finally {
+    loading.value = false
+  }
+}
+
+function goToPage(page) {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    loadProducts()
   }
 }
 
@@ -193,50 +362,130 @@ const loadCategories = async () => {
 
 const openModal = (product = null) => {
   editingProduct.value = product
+  clearImagePreview()
   if (product) {
-    form.value = { ...product }
+    form.value = {
+      name: product.name ?? '',
+      description: product.description ?? '',
+      category: product.category ?? '',
+      sku: product.sku ?? '',
+      barcode: product.barcode ?? '',
+      cost_price: product.cost_price ?? 0,
+      profit_margin: product.profit_margin ?? 0,
+      sale_price: product.sale_price ?? 0,
+      price_manually_set: product.price_manually_set ?? false,
+      stock_quantity: product.stock_quantity ?? 0,
+      min_stock: product.min_stock ?? 0,
+      unit: product.unit ?? 'UN',
+      is_active: product.is_active !== false,
+    }
+    if (product.image_url) {
+      imagePreviewUrl.value = product.image_url
+    }
   } else {
     form.value = {
       name: '',
+      description: '',
       category: '',
+      sku: '',
+      barcode: '',
       cost_price: 0,
+      profit_margin: 0,
       sale_price: 0,
+      price_manually_set: false,
       stock_quantity: 0,
       min_stock: 0,
-      unit: 'un',
+      unit: 'UN',
       is_active: true,
     }
   }
   showModal.value = true
+  nextTick(() => {
+    if (fileInputRef.value) fileInputRef.value.value = ''
+  })
 }
 
 const closeModal = () => {
   showModal.value = false
   editingProduct.value = null
+  clearImagePreview()
+}
+
+function openCategoryModal() {
+  categoryForm.value = { name: '', description: '' }
+  categoryError.value = ''
+  showCategoryModal.value = true
+}
+
+function closeCategoryModal() {
+  showCategoryModal.value = false
+  categoryForm.value = { name: '', description: '' }
+  categoryError.value = ''
+}
+
+async function saveCategory() {
+  categoryError.value = ''
+  try {
+    const res = await productsService.createCategory({
+      name: categoryForm.value.name.trim(),
+      description: (categoryForm.value.description || '').trim(),
+      is_active: true,
+    })
+    const newCat = res.data
+    await loadCategories()
+    if (showModal.value && newCat?.id) {
+      form.value.category = newCat.id
+    }
+    closeCategoryModal()
+  } catch (err) {
+    categoryError.value = err.response?.data?.name?.[0] || err.response?.data?.detail || err.response?.data?.error || 'Erro ao salvar categoria'
+  }
 }
 
 const saveProduct = async () => {
   try {
-    const data = {
-      ...form.value,
+    const payload = {
+      name: String(form.value.name).trim(),
+      description: String(form.value.description || '').trim(),
       category: parseInt(form.value.category),
-      cost_price: parseFloat(form.value.cost_price),
-      sale_price: parseFloat(form.value.sale_price),
-      stock_quantity: parseInt(form.value.stock_quantity),
-      min_stock: parseInt(form.value.min_stock),
+      sku: (form.value.sku || '').trim() || null,
+      barcode: (form.value.barcode || '').trim() || null,
+      cost_price: parseFloat(form.value.cost_price) || 0,
+      profit_margin: parseFloat(form.value.profit_margin) || 0,
+      sale_price: parseFloat(form.value.sale_price) || 0.01,
+      price_manually_set: Boolean(form.value.price_manually_set),
+      stock_quantity: parseInt(form.value.stock_quantity) || 0,
+      min_stock: parseInt(form.value.min_stock) || 0,
+      unit: (form.value.unit || 'UN').trim() || 'UN',
+      is_active: form.value.is_active !== false,
     }
-    
-    if (editingProduct.value) {
-      await productsService.update(editingProduct.value.id, data)
+    if (imageFile.value) {
+      const formData = new FormData()
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+          formData.append(key, value === true ? 'true' : value === false ? 'false' : String(value))
+        }
+      })
+      formData.append('image', imageFile.value)
+      if (editingProduct.value) {
+        await productsService.update(editingProduct.value.id, formData)
+      } else {
+        await productsService.create(formData)
+      }
     } else {
-      await productsService.create(data)
+      if (editingProduct.value) {
+        await productsService.update(editingProduct.value.id, payload)
+      } else {
+        await productsService.create(payload)
+      }
     }
     await loadProducts()
     closeModal()
   } catch (error) {
     console.error('Erro ao salvar produto:', error)
-    const errorMsg = error.response?.data?.details || error.response?.data?.error || 'Erro ao salvar produto'
-    alert(errorMsg)
+    const err = error.response?.data
+    const errorMsg = err?.details || err?.error || (typeof err?.name === 'object' ? err?.name?.[0] : err?.name) || 'Erro ao salvar produto'
+    alert(typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg))
   }
 }
 
@@ -248,7 +497,8 @@ const deleteProduct = async (id) => {
     await loadProducts()
   } catch (error) {
     console.error('Erro ao excluir produto:', error)
-    alert('Erro ao excluir produto')
+    const msg = error.response?.data?.error ?? error.response?.data?.detail ?? 'Erro ao excluir produto'
+    alert(typeof msg === 'string' ? msg : JSON.stringify(msg))
   }
 }
 

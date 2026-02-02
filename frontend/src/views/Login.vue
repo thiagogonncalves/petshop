@@ -18,18 +18,15 @@
     
     <div class="max-w-md w-full relative z-10">
       <div class="bg-white rounded-xl shadow-2xl p-8">
-        <!-- Logo e Título -->
+        <!-- Logo e Título (dados da empresa) -->
         <div class="text-center mb-8">
           <div class="flex items-center justify-center mb-4">
-            <svg class="w-14 h-14 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
-            <svg class="w-14 h-14 text-blue-600 -ml-2" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-            </svg>
+            <img v-if="company.logo_url" :src="company.logo_url" :alt="company.name || 'Logo'" class="w-48 h-48 object-contain" />
+            <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="w-48 h-48 object-contain" />
           </div>
-          <h1 class="text-4xl font-bold text-blue-800 mb-2">GB PET</h1>
-          <p class="text-blue-600 text-base font-medium">Your Friendly Pet Shop</p>
+          <p v-if="company.name" class="text-gray-800 font-semibold text-lg">{{ company.name }}</p>
+          <p v-if="company.cpf_cnpj" class="text-gray-600 text-sm">{{ company.cpf_cnpj }}</p>
+          <p class="text-blue-600 text-base font-medium mt-1">Sistema de Gestão para Pet Shop</p>
         </div>
 
         <!-- Formulário -->
@@ -86,15 +83,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { companyService } from '@/services/company'
 
 const authStore = useAuthStore()
+const company = ref({})
 
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+
+onMounted(async () => {
+  try {
+    const { data } = await companyService.get()
+    company.value = data || {}
+  } catch {
+    company.value = {}
+  }
+})
 
 const handleLogin = async () => {
   loading.value = true

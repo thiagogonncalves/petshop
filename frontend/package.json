@@ -1,6 +1,7 @@
 {
   "name": "petshop-frontend",
   "version": "1.0.0",
+  "type": "module",
   "description": "Pet Shop Management System - Frontend",
   "scripts": {
     "dev": "vite",
