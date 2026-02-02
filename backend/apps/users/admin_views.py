@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth.password_validation import validate_password
-from .models import User, UserRole, Role
+from .models import User, UserRole, Role, CompanySettings
 from .models import PERMISSION_CHOICES
 from .permissions import IsAdmin
 from .admin_serializers import (
@@ -16,6 +16,7 @@ from .admin_serializers import (
     AdminUserUpdateSerializer,
     RoleSerializer,
     RoleCreateUpdateSerializer,
+    CompanySettingsSerializer,
 )
 
 
@@ -130,3 +131,19 @@ class AdminRoleOptionsViewSet(viewsets.ViewSet):
         ]
         custom = [{'value': f'role_{r.id}', 'label': r.name, 'type': 'custom', 'id': r.id} for r in Role.objects.all()]
         return Response(builtin + custom)
+
+
+class CompanySettingsViewSet(viewsets.ModelViewSet):
+    """
+    Dados da empresa (singleton): GET e PATCH. Usado em Administração > Dados da empresa.
+    """
+    permission_classes = [IsAdmin]
+    serializer_class = CompanySettingsSerializer
+    http_method_names = ['get', 'head', 'options', 'patch']
+    pagination_class = None
+
+    def get_queryset(self):
+        obj, _ = CompanySettings.objects.get_or_create(
+            defaults={'name': '', 'cpf_cnpj': '', 'address': '', 'address_number': ''}
+        )
+        return CompanySettings.objects.filter(pk=obj.pk)

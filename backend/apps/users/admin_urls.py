@@ -8,6 +8,7 @@ from .admin_views import (
     AdminRoleViewSet,
     AdminPermissionsViewSet,
     AdminRoleOptionsViewSet,
+    CompanySettingsViewSet,
 )
 
 router = DefaultRouter()
@@ -15,6 +16,7 @@ router.register(r'users', AdminUserViewSet, basename='admin-user')
 router.register(r'roles', AdminRoleViewSet, basename='admin-role')
 router.register(r'permissions', AdminPermissionsViewSet, basename='admin-permissions')
 router.register(r'role-options', AdminRoleOptionsViewSet, basename='admin-role-options')
+router.register(r'company-settings', CompanySettingsViewSet, basename='admin-company-settings')
 
 urlpatterns = [
     path('', include(router.urls)),

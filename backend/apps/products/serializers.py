@@ -20,6 +20,7 @@ class ProductSerializer(serializers.ModelSerializer):
     """Serializer for Product model"""
     category_name = serializers.CharField(source='category.name', read_only=True)
     is_low_stock = serializers.ReadOnlyField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -28,18 +29,36 @@ class ProductSerializer(serializers.ModelSerializer):
             'barcode', 'sku', 'gtin', 'unit',
             'cost_price', 'profit_margin', 'sale_price', 'price_manually_set',
             'stock_quantity', 'min_stock', 'is_low_stock',
+            'image', 'image_url',
             'is_active', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class ProductPdvSerializer(serializers.ModelSerializer):
     """Lightweight serializer for PDV: search and by-code."""
     stock_balance = serializers.IntegerField(source='stock_quantity', read_only=True)
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'sku', 'gtin', 'sale_price', 'stock_balance']
+        fields = ['id', 'name', 'sku', 'gtin', 'sale_price', 'stock_balance', 'image_url']
+
+    def get_image_url(self, obj):
+        if obj.image:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.image.url)
+            return obj.image.url
+        return None
 
 
 class ProductPricingSerializer(serializers.Serializer):

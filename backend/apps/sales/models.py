@@ -17,11 +17,13 @@ class Sale(models.Model):
         ('pix', 'PIX'),
         ('bank_transfer', 'Transferência Bancária'),
         ('installment', 'Parcelado'),
+        ('crediario', 'Crediário da Casa'),
     ]
     
     STATUS_CHOICES = [
         ('pending', 'Pendente'),
         ('paid', 'Pago'),
+        ('credit_open', 'Crediário em aberto'),
         ('cancelled', 'Cancelado'),
         ('refunded', 'Reembolsado'),
     ]
@@ -259,3 +261,169 @@ class Invoice(models.Model):
 
     def __str__(self):
         return f"Nota #{self.invoice_number} - Venda #{self.sale.id}"
+
+
+class CreditAccount(models.Model):
+    """
+    Crediário da Casa (Store Credit / Fiado)
+    OneToOne with Sale when payment_method=crediario
+    """
+    STATUS_CHOICES = [
+        ('open', 'Em aberto'),
+        ('settled', 'Quitado'),
+        ('cancelled', 'Cancelado'),
+    ]
+
+    sale = models.OneToOneField(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name='credit_account',
+        verbose_name='Venda'
+    )
+    client = models.ForeignKey(
+        'clients.Client',
+        on_delete=models.PROTECT,
+        related_name='credit_accounts',
+        verbose_name='Cliente'
+    )
+    total_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Valor total'
+    )
+    down_payment = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Entrada'
+    )
+    financed_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Valor financiado'
+    )
+    installments_count = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)],
+        verbose_name='Número de parcelas'
+    )
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='open',
+        verbose_name='Status'
+    )
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.PROTECT,
+        related_name='created_credit_accounts',
+        verbose_name='Criado por'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+
+    class Meta:
+        verbose_name = 'Crediário'
+        verbose_name_plural = 'Crediários'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['client', 'status']),
+            models.Index(fields=['status']),
+        ]
+
+    def __str__(self):
+        return f"Crediário #{self.id} - {self.client.name} - R$ {self.financed_amount}"
+
+    @property
+    def next_due_date(self):
+        """Próxima data de vencimento (parcela pendente mais antiga)"""
+        inst = self.installments.filter(status__in=['pending', 'overdue']).order_by('due_date').first()
+        return inst.due_date if inst else None
+
+    @property
+    def pending_count(self):
+        return self.installments.filter(status__in=['pending', 'overdue']).count()
+
+    @property
+    def paid_count(self):
+        return self.installments.filter(status='paid').count()
+
+    @property
+    def overdue_count(self):
+        return self.installments.filter(status='overdue').count()
+
+
+class CreditInstallment(models.Model):
+    """
+    Parcela do Crediário
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pendente'),
+        ('paid', 'Pago'),
+        ('overdue', 'Atrasado'),
+        ('cancelled', 'Cancelado'),
+    ]
+
+    credit_account = models.ForeignKey(
+        CreditAccount,
+        on_delete=models.CASCADE,
+        related_name='installments',
+        verbose_name='Crediário'
+    )
+    number = models.PositiveIntegerField(verbose_name='Número da parcela')
+    due_date = models.DateField(verbose_name='Data de vencimento')
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Valor'
+    )
+    status = models.CharField(
+        max_length=15,
+        choices=STATUS_CHOICES,
+        default='pending',
+        verbose_name='Status'
+    )
+    paid_at = models.DateTimeField(null=True, blank=True, verbose_name='Data do pagamento')
+    payment_method = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        verbose_name='Forma de pagamento',
+        choices=[
+            ('cash', 'Dinheiro'),
+            ('credit_card', 'Cartão de Crédito'),
+            ('debit_card', 'Cartão de Débito'),
+            ('pix', 'PIX'),
+            ('bank_transfer', 'Transferência Bancária'),
+        ],
+    )
+    paid_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Valor pago'
+    )
+    paid_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='paid_installments',
+        verbose_name='Pago por'
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+
+    class Meta:
+        verbose_name = 'Parcela'
+        verbose_name_plural = 'Parcelas'
+        ordering = ['credit_account', 'number']
+        unique_together = [('credit_account', 'number')]
+        indexes = [
+            models.Index(fields=['due_date', 'status']),
+        ]
+
+    def __str__(self):
+        return f"Parcela {self.number}/{self.credit_account.installments_count} - R$ {self.amount}"

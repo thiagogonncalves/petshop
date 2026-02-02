@@ -3,7 +3,7 @@ Sales serializers
 """
 from decimal import Decimal
 from rest_framework import serializers
-from .models import Sale, SaleItem, Receipt, Invoice
+from .models import Sale, SaleItem, Receipt, Invoice, CreditAccount, CreditInstallment
 
 
 class SaleItemSerializer(serializers.ModelSerializer):
@@ -124,14 +124,32 @@ class PdvSaleItemInputSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=1)
     unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
+    discount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
+        required=False, default=Decimal('0.00')
+    )
 
 
 class PdvSaleCreateSerializer(serializers.Serializer):
     """Create and finalize a PDV sale in one request."""
     cpf = serializers.CharField(required=False, allow_blank=True)
+    client_cpf = serializers.CharField(required=False, allow_blank=True)
     is_walk_in = serializers.BooleanField(default=False)
     items = PdvSaleItemInputSerializer(many=True)
     payment_method = serializers.ChoiceField(choices=Sale.PAYMENT_METHOD_CHOICES)
+    discount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
+        required=False, default=Decimal('0.00')
+    )
+    # Crediário fields (when payment_method=crediario)
+    down_payment = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
+        required=False, default=Decimal('0.00')
+    )
+    installments_count = serializers.IntegerField(
+        min_value=1, max_value=12, required=False
+    )
+    first_due_date = serializers.DateField(required=False)
 
     def validate_items(self, value):
         if not value:
@@ -139,9 +157,116 @@ class PdvSaleCreateSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
-        if not attrs.get('is_walk_in'):
-            cpf = (attrs.get('cpf') or '').strip()
-            cpf_digits = ''.join(c for c in cpf if c.isdigit())
+        payment_method = attrs.get('payment_method')
+        is_walk_in = attrs.get('is_walk_in', True)
+
+        if payment_method == 'crediario':
+            # Crediário: client required, no walk-in
+            cpf_raw = (attrs.get('client_cpf') or attrs.get('cpf') or '').strip()
+            cpf_digits = ''.join(c for c in cpf_raw if c.isdigit())
             if len(cpf_digits) != 11:
-                raise serializers.ValidationError({'cpf': 'Informe um CPF válido (11 dígitos) ou marque Venda avulsa.'})
+                raise serializers.ValidationError({
+                    'cpf': 'Crediário exige cliente cadastrado. Informe CPF válido (11 dígitos).'
+                })
+            if is_walk_in:
+                raise serializers.ValidationError({
+                    'is_walk_in': 'Venda avulsa não permitida no crediário. Selecione um cliente.'
+                })
+            inst_count = attrs.get('installments_count', 0)
+            if inst_count < 1 or inst_count > 12:
+                raise serializers.ValidationError({
+                    'installments_count': 'Número de parcelas deve ser entre 1 e 12.'
+                })
+            if not attrs.get('first_due_date'):
+                raise serializers.ValidationError({
+                    'first_due_date': 'Data do primeiro vencimento é obrigatória.'
+                })
+        else:
+            # Other payment methods
+            if not is_walk_in:
+                cpf = (attrs.get('cpf') or '').strip()
+                cpf_digits = ''.join(c for c in cpf if c.isdigit())
+                if len(cpf_digits) != 11:
+                    raise serializers.ValidationError({
+                        'cpf': 'Informe um CPF válido (11 dígitos) ou marque Venda avulsa.'
+                    })
         return attrs
+
+
+# --- Crediário serializers ---
+
+class CreditInstallmentSerializer(serializers.ModelSerializer):
+    """Serializer for CreditInstallment"""
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    paid_by_name = serializers.CharField(source='paid_by.username', read_only=True)
+
+    class Meta:
+        model = CreditInstallment
+        fields = [
+            'id', 'number', 'due_date', 'amount', 'status', 'status_display',
+            'paid_at', 'paid_amount', 'payment_method', 'payment_method_display',
+            'paid_by', 'paid_by_name', 'created_at'
+        ]
+        read_only_fields = ['id', 'number', 'due_date', 'amount', 'created_at']
+
+
+class CreditAccountSerializer(serializers.ModelSerializer):
+    """Serializer for CreditAccount list/detail"""
+    client_name = serializers.CharField(source='client.name', read_only=True)
+    client_document = serializers.CharField(source='client.document', read_only=True)
+    sale_id = serializers.IntegerField(source='sale.id', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    installments = CreditInstallmentSerializer(many=True, read_only=True)
+    next_due_date = serializers.DateField(read_only=True)
+    pending_count = serializers.IntegerField(read_only=True)
+    overdue_count = serializers.IntegerField(read_only=True)
+    created_by_name = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = CreditAccount
+        fields = [
+            'id', 'sale', 'sale_id', 'client', 'client_name', 'client_document',
+            'total_amount', 'down_payment', 'financed_amount', 'installments_count',
+            'status', 'status_display', 'installments',
+            'next_due_date', 'pending_count', 'overdue_count',
+            'created_by', 'created_by_name', 'created_at'
+        ]
+        read_only_fields = fields
+
+
+class CreditAccountListSerializer(serializers.ModelSerializer):
+    """Light serializer for CreditAccount list"""
+    client_name = serializers.CharField(source='client.name', read_only=True)
+    sale_id = serializers.IntegerField(source='sale.id', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = CreditAccount
+        fields = [
+            'id', 'sale_id', 'client', 'client_name', 'total_amount',
+            'financed_amount', 'installments_count',
+            'status', 'status_display',
+            'next_due_date', 'pending_count', 'overdue_count',
+            'created_at'
+        ]
+
+
+class PayInstallmentSerializer(serializers.Serializer):
+    """Payload for paying an installment"""
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.01'),
+        required=False
+    )
+    paid_at = serializers.DateTimeField(required=False)
+    payment_method = serializers.ChoiceField(
+        choices=[
+            ('cash', 'Dinheiro'),
+            ('credit_card', 'Cartão de Crédito'),
+            ('debit_card', 'Cartão de Débito'),
+            ('pix', 'PIX'),
+            ('bank_transfer', 'Transferência Bancária'),
+        ],
+        required=True,
+        error_messages={'required': 'Informe a forma de pagamento.'},
+    )

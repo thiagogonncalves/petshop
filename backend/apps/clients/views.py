@@ -49,3 +49,13 @@ class ClientViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Cliente não encontrado'}, status=status.HTTP_404_NOT_FOUND)
         serializer = self.get_serializer(client)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['get'])
+    def credits(self, request, pk=None):
+        """Histórico de crediários do cliente."""
+        client = self.get_object()
+        from apps.sales.models import CreditAccount
+        from apps.sales.serializers import CreditAccountListSerializer
+        accounts = CreditAccount.objects.filter(client=client).select_related('sale').prefetch_related('installments').order_by('-created_at')
+        serializer = CreditAccountListSerializer(accounts, many=True)
+        return Response(serializer.data)

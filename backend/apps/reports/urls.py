@@ -5,6 +5,7 @@ from django.urls import path
 from .views import (
     SellersReportView,
     DashboardReportView,
+    DashboardSummaryView,
     SalesReportView,
     ProductsSoldReportView,
     SalesRankingReportView,
@@ -20,6 +21,7 @@ from .views import (
 
 urlpatterns = [
     path('sellers/', SellersReportView.as_view(), name='reports-sellers'),
+    path('dashboard-summary/', DashboardSummaryView.as_view(), name='reports-dashboard-summary'),
     path('dashboard/', DashboardReportView.as_view(), name='reports-dashboard'),
     path('sales/export.csv', SalesExportCSVView.as_view(), name='reports-sales-export-csv'),
     path('sales/', SalesReportView.as_view(), name='reports-sales'),

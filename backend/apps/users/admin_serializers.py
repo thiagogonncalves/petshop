@@ -3,7 +3,7 @@ Serializers for admin-only user management.
 """
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from .models import User, UserRole, Role, RolePermission
+from .models import User, UserRole, Role, RolePermission, CompanySettings
 
 
 class AdminUserListSerializer(serializers.ModelSerializer):
@@ -146,3 +146,21 @@ class RoleCreateUpdateSerializer(serializers.ModelSerializer):
             for code in perms:
                 RolePermission.objects.get_or_create(role=instance, permission_code=code)
         return instance
+
+
+class CompanySettingsSerializer(serializers.ModelSerializer):
+    """Dados da empresa (leitura: inclui logo_url para frontend)."""
+    logo_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CompanySettings
+        fields = ['id', 'name', 'cpf_cnpj', 'address', 'address_number', 'logo', 'logo_url']
+        read_only_fields = ['id', 'logo_url']
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            request = self.context.get('request')
+            if request:
+                return request.build_absolute_uri(obj.logo.url)
+            return obj.logo.url
+        return None

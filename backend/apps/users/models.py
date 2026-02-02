@@ -141,3 +141,24 @@ class User(AbstractUser):
         }
         user_permissions = permissions.get(self.role, [])
         return permission_code in user_permissions
+
+
+class CompanySettings(models.Model):
+    """
+    Dados da empresa (singleton): logo, nome, CPF/CNPJ, endereço.
+    Usado na tela de login, PDV e cupom.
+    """
+    name = models.CharField(max_length=200, blank=True, verbose_name='Nome da empresa')
+    cpf_cnpj = models.CharField(max_length=20, blank=True, verbose_name='CPF/CNPJ')
+    address = models.CharField(max_length=300, blank=True, verbose_name='Endereço')
+    address_number = models.CharField(max_length=20, blank=True, verbose_name='Número')
+    logo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Logo (PNG)')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Dados da empresa'
+        verbose_name_plural = 'Dados da empresa'
+
+    def __str__(self):
+        return self.name or 'Dados da empresa'

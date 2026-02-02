@@ -16,6 +16,7 @@ from rest_framework.pagination import PageNumberPagination
 
 from apps.reports.services.queries import (
     dashboard_data,
+    get_dashboard_summary,
     sales_report_queryset,
     products_sold,
     sales_ranking,
@@ -57,6 +58,20 @@ class ReportPagination(PageNumberPagination):
 
 
 # ---------- Dashboard ----------
+class DashboardSummaryView(APIView):
+    """
+    Dashboard resumido: KPIs, agenda do dia, alertas, clientes, gráficos, insights.
+    GET /api/reports/dashboard-summary/?date=YYYY-MM-DD
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        date_str = request.query_params.get('date')
+        data = get_dashboard_summary(target_date=date_str)
+        data = _serialize_decimals(data)
+        return Response(data)
+
+
 class SellersReportView(APIView):
     """List of users that have created sales (for filter dropdowns)."""
     permission_classes = [IsAuthenticated]

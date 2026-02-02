@@ -7,16 +7,17 @@ from decimal import Decimal
 
 from django.db.models import (
     Sum, Count, Avg, Q, F, Value, IntegerField, DecimalField,
-    Case, When,
+    Case, When, ExpressionWrapper,
 )
 from django.db.models.functions import Coalesce, TruncDate, TruncDay
 from django.utils import timezone
 
-from apps.sales.models import Sale, SaleItem
+from apps.sales.models import Sale, SaleItem, CreditAccount, CreditInstallment
 from apps.products.models import Product, Category
 from apps.services.models import Service
 from apps.clients.models import Client
 from apps.users.models import User
+from apps.scheduling.models import Appointment
 
 
 def get_sellers():
@@ -170,6 +171,280 @@ def dashboard_data(start, end, user_id=None, payment_method=None, status='paid')
         'top_5_products': top_products,
         'top_5_clients': top_clients,
         'period': {'start': start.isoformat(), 'end': end.isoformat()},
+    }
+
+
+# ---------- Dashboard resumido (único endpoint agregado) ----------
+def get_dashboard_summary(target_date=None):
+    """
+    Retorna todos os dados do dashboard em uma única chamada.
+    GET /api/reports/dashboard-summary/?date=YYYY-MM-DD
+    """
+    today = _parse_date(target_date, timezone.now().date())
+    yesterday = today - timedelta(days=1)
+    month_start = today.replace(day=1)
+    seven_days_ago = today - timedelta(days=7)
+    inactive_days = 60  # clientes inativos: sem compra/agendamento há 60 dias
+    low_stock_threshold = 5
+
+    tz = timezone.get_current_timezone()
+
+    # --- KPIs ---
+    sales_paid_qs = Sale.objects.filter(
+        status__in=['paid', 'credit_open'],
+    ).exclude(status='cancelled')
+
+    # Vendas hoje
+    from datetime import datetime
+    today_start = timezone.make_aware(datetime.combine(today, datetime.min.time()), tz)
+    today_end = timezone.make_aware(datetime.combine(today, datetime.max.time().replace(microsecond=0)), tz)
+    yesterday_start = timezone.make_aware(datetime.combine(yesterday, datetime.min.time()), tz)
+    yesterday_end = timezone.make_aware(datetime.combine(yesterday, datetime.max.time().replace(microsecond=0)), tz)
+
+    sales_today_agg = sales_paid_qs.filter(sale_date__gte=today_start, sale_date__lte=today_end).aggregate(
+        total=Coalesce(Sum('total'), Decimal('0'))
+    )
+    sales_yesterday_agg = sales_paid_qs.filter(sale_date__gte=yesterday_start, sale_date__lte=yesterday_end).aggregate(
+        total=Coalesce(Sum('total'), Decimal('0'))
+    )
+    sales_today = sales_today_agg['total'] or Decimal('0')
+    sales_yesterday = sales_yesterday_agg['total'] or Decimal('0')
+
+    sales_today_change_pct = 0
+    if sales_yesterday and sales_yesterday > 0:
+        sales_today_change_pct = float((sales_today - sales_yesterday) / sales_yesterday * 100)
+
+    # Vendas no mês
+    month_end = timezone.make_aware(datetime.combine(today, datetime.max.time().replace(microsecond=0)), tz)
+    sales_month_agg = sales_paid_qs.filter(
+        sale_date__gte=timezone.make_aware(datetime.combine(month_start, datetime.min.time()), tz),
+        sale_date__lte=month_end,
+    ).aggregate(total=Coalesce(Sum('total'), Decimal('0')))
+    sales_month = sales_month_agg['total'] or Decimal('0')
+    sales_month_goal = None  # opcional, pode vir de config
+
+    # Atendimentos hoje
+    today_appts = Appointment.objects.filter(
+        start_at__date=today,
+    ).exclude(status__in=['cancelled', 'no_show'])
+    appts_total = today_appts.count()
+    appts_done = today_appts.filter(status__in=['completed', 'done']).count()
+
+    # Crediário em aberto (valor total de parcelas pendentes/overdue)
+    credit_open_total = CreditInstallment.objects.filter(
+        credit_account__status='open',
+        status__in=['pending', 'overdue'],
+    ).aggregate(t=Coalesce(Sum('amount'), Decimal('0')))['t'] or Decimal('0')
+    credit_overdue_count = CreditInstallment.objects.filter(
+        credit_account__status='open',
+        status__in=['pending', 'overdue'],
+        due_date__lt=today,
+    ).count()
+
+    kpis = {
+        'sales_today': float(sales_today),
+        'sales_yesterday': float(sales_yesterday),
+        'sales_today_change_pct': round(sales_today_change_pct, 1),
+        'sales_month': float(sales_month),
+        'sales_month_goal': float(sales_month_goal) if sales_month_goal else None,
+        'appointments_today_total': appts_total,
+        'appointments_today_done': appts_done,
+        'credit_open_total': float(credit_open_total),
+        'credit_overdue_count': credit_overdue_count,
+    }
+
+    # --- Agenda do dia ---
+    schedule_qs = Appointment.objects.filter(
+        start_at__date=today,
+    ).exclude(status__in=['cancelled', 'no_show']).select_related('client', 'pet', 'service').order_by('start_at')
+    today_schedule = []
+    for apt in schedule_qs:
+        start_at = apt.start_at
+        time_str = start_at.strftime('%H:%M') if start_at else ''
+        today_schedule.append({
+            'id': apt.id,
+            'time': time_str,
+            'client': apt.client.name if apt.client else '-',
+            'pet': apt.pet.name if apt.pet else '-',
+            'service': apt.service.name if apt.service else '-',
+            'status': apt.status,
+            'status_display': apt.get_status_display(),
+        })
+
+    # --- Alertas ---
+    low_stock_products = Product.objects.filter(
+        is_active=True,
+        stock_quantity__lte=low_stock_threshold,
+    ).order_by('stock_quantity')[:10].values('id', 'name', 'stock_quantity')
+    low_stock_list = [
+        {'product_id': p['id'], 'name': p['name'], 'balance': p['stock_quantity']}
+        for p in low_stock_products
+    ]
+
+    credit_due_list = []
+    overdue_installs = CreditInstallment.objects.filter(
+        credit_account__status='open',
+        status__in=['pending', 'overdue'],
+        due_date__lte=today + timedelta(days=7),
+    ).select_related('credit_account__client').order_by('due_date')[:10]
+    for inst in overdue_installs:
+        client_name = inst.credit_account.client.name if inst.credit_account.client else '-'
+        credit_due_list.append({
+            'installment_id': inst.id,
+            'credit_id': inst.credit_account_id,
+            'client': client_name,
+            'amount': float(inst.amount),
+            'due_date': inst.due_date.isoformat(),
+            'status': 'OVERDUE' if inst.due_date < today else 'DUE',
+        })
+
+    alerts = {
+        'low_stock': low_stock_list,
+        'credit_due': credit_due_list,
+    }
+
+    # --- Top clientes do mês ---
+    month_sales_qs = sales_paid_qs.filter(
+        sale_date__gte=timezone.make_aware(datetime.combine(month_start, datetime.min.time()), tz),
+        sale_date__lte=month_end,
+        client__isnull=False,
+    )
+    top_clients_month = list(
+        month_sales_qs.values('client_id', 'client__name')
+        .annotate(
+            revenue=Coalesce(Sum('total'), Decimal('0')),
+            visits=Count('id'),
+        )
+        .order_by('-revenue')[:5]
+    )
+    customers_top = [
+        {
+            'client_id': r['client_id'],
+            'name': r['client__name'],
+            'revenue': float(r['revenue']),
+            'visits': r['visits'],
+        }
+        for r in top_clients_month
+    ]
+
+    # --- Clientes inativos (sem venda nem agendamento há 60+ dias) ---
+    from django.db.models import Max
+    inactive_cutoff = timezone.make_aware(datetime.combine(today - timedelta(days=inactive_days), datetime.min.time()), tz)
+    clients_with_recent_sale = set(
+        Sale.objects.filter(sale_date__gte=inactive_cutoff, client__isnull=False).values_list('client_id', flat=True)
+    )
+    clients_with_recent_apt = set(
+        Appointment.objects.filter(start_at__gte=inactive_cutoff).values_list('client_id', flat=True)
+    )
+    clients_with_recent = clients_with_recent_sale | clients_with_recent_apt
+    inactive_clients_qs = Client.objects.filter(is_active=True).exclude(id__in=clients_with_recent)
+    last_sale_map = dict(
+        Sale.objects.filter(client__isnull=False)
+        .values('client_id')
+        .annotate(d=Max('sale_date'))
+        .values_list('client_id', 'd')
+    )
+    last_apt_map = dict(
+        Appointment.objects.values('client_id')
+        .annotate(d=Max('start_at'))
+        .values_list('client_id', 'd')
+    )
+    inactive_list = []
+    for c in inactive_clients_qs[:15]:
+        ls = last_sale_map.get(c.id)
+        la = last_apt_map.get(c.id)
+        candidates = [x for x in [ls, la] if x is not None]
+        last_dt = max(candidates) if candidates else None
+        if last_dt:
+            last_date = last_dt.date() if hasattr(last_dt, 'date') else last_dt
+            days_inactive = (today - last_date).days
+            inactive_list.append({
+                'client_id': c.id,
+                'name': c.name,
+                'last_visit': last_date.isoformat(),
+                'days_inactive': days_inactive,
+            })
+    inactive_list.sort(key=lambda x: x['days_inactive'], reverse=True)
+    inactive_list = inactive_list[:5]
+
+    customers = {
+        'top_clients_month': customers_top,
+        'inactive_clients': inactive_list,
+    }
+
+    # --- Gráficos ---
+    seven_days_start = timezone.make_aware(datetime.combine(seven_days_ago, datetime.min.time()), tz)
+    sales_7d_qs = sales_paid_qs.filter(
+        sale_date__gte=seven_days_start,
+        sale_date__lte=today_end,
+    )
+    sales_7d = list(
+        sales_7d_qs.annotate(day=TruncDay('sale_date'))
+        .values('day')
+        .annotate(value=Coalesce(Sum('total'), Decimal('0')))
+        .order_by('day')
+    )
+    sales_7d_by_date = {r['day'].date(): r['value'] for r in sales_7d if r.get('day')}
+    sales_last_7_days = []
+    for d in range(8):
+        dt = seven_days_ago + timedelta(days=d)
+        if dt <= today:
+            sales_last_7_days.append({
+                'date': dt.isoformat(),
+                'value': float(sales_7d_by_date.get(dt, Decimal('0'))),
+            })
+
+    sale_ids_7d = list(sales_7d_qs.values_list('id', flat=True))
+    top_products = list(
+        SaleItem.objects.filter(
+            sale_id__in=sale_ids_7d,
+            item_type='product',
+            product__isnull=False,
+        )
+        .values('product_id', 'product__name')
+        .annotate(
+            qty=Coalesce(Sum('quantity'), 0),
+            revenue=Coalesce(Sum('total'), Decimal('0')),
+        )
+        .order_by('-qty')[:5]
+    ) if sale_ids_7d else []
+    charts_top_products = [
+        {
+            'product_id': r['product_id'],
+            'name': r['product__name'],
+            'qty': r['qty'],
+            'revenue': float(r['revenue']),
+        }
+        for r in top_products
+    ]
+
+    charts = {
+        'sales_last_7_days': sales_last_7_days,
+        'top_products': charts_top_products,
+    }
+
+    # --- Insights ---
+    insights = []
+    if today_schedule:
+        from collections import Counter
+        hours = [a['time'].split(':')[0] for a in today_schedule if a.get('time')]
+        if hours:
+            most_hour = Counter(hours).most_common(1)[0][0]
+            insights.append(f'Horário mais movimentado hoje: {most_hour}h–{int(most_hour)+1}h')
+    if charts_top_products:
+        insights.append(f'Produto mais vendido na semana: {charts_top_products[0]["name"]}')
+    if credit_overdue_count > 0:
+        insights.append(f'Existem {credit_overdue_count} parcela(s) vencida(s) no crediário.')
+    if not insights:
+        insights.append('Nenhum insight específico para hoje.')
+
+    return {
+        'kpis': kpis,
+        'today_schedule': today_schedule,
+        'alerts': alerts,
+        'customers': customers,
+        'charts': charts,
+        'insights': insights,
     }
 
 

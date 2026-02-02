@@ -27,9 +27,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         end_date = self.request.query_params.get('end_date')
         
         if start_date:
-            queryset = queryset.filter(scheduled_date__gte=start_date)
+            queryset = queryset.filter(start_at__gte=start_date)
         if end_date:
-            queryset = queryset.filter(scheduled_date__lte=end_date)
+            queryset = queryset.filter(start_at__lte=end_date)
         
         return queryset
 
@@ -37,9 +37,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
     def upcoming(self, request):
         """Get upcoming appointments"""
         appointments = Appointment.objects.filter(
-            scheduled_date__gte=timezone.now(),
-            status__in=['scheduled', 'in_progress']
-        ).order_by('scheduled_date')[:20]
+            start_at__gte=timezone.now(),
+            status__in=['scheduled', 'confirmed', 'in_progress']
+        ).order_by('start_at')[:20]
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
 
@@ -48,9 +48,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """Get today's appointments"""
         today = timezone.now().date()
         appointments = Appointment.objects.filter(
-            scheduled_date__date=today,
-            status__in=['scheduled', 'in_progress']
-        ).order_by('scheduled_date')
+            start_at__date=today,
+            status__in=['scheduled', 'confirmed', 'in_progress']
+        ).order_by('start_at')
         serializer = self.get_serializer(appointments, many=True)
         return Response(serializer.data)
 

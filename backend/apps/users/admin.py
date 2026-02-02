@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Role, RolePermission
+from .models import User, Role, RolePermission, CompanySettings
 
 
 class RolePermissionInline(admin.TabularInline):
@@ -24,3 +24,9 @@ class UserAdmin(BaseUserAdmin):
     add_fieldsets = BaseUserAdmin.add_fieldsets + (
         ('Informações Adicionais', {'fields': ('role', 'custom_role', 'phone', 'email')}),
     )
+
+
+@admin.register(CompanySettings)
+class CompanySettingsAdmin(admin.ModelAdmin):
+    list_display = ('name', 'cpf_cnpj', 'updated_at')
+    fields = ('name', 'cpf_cnpj', 'address', 'address_number', 'logo')

@@ -4,6 +4,7 @@ Product views
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.db import models
 from django.db.models.deletion import ProtectedError
 from .models import Category, Product, StockMovement, Purchase
@@ -25,10 +26,17 @@ class CategoryViewSet(viewsets.ModelViewSet):
     search_fields = ['name']
 
 
+class ProductPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
+
 class ProductViewSet(viewsets.ModelViewSet):
-    """ViewSet for Product management."""
+    """ViewSet for Product management (editável: preço de venda, custo, margem, etc.)."""
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    pagination_class = ProductPagination
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'barcode', 'sku', 'gtin']
 

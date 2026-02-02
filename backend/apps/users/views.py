@@ -4,14 +4,29 @@ User views
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import User
+from .models import User, CompanySettings
 from .serializers import (
     UserSerializer, UserCreateSerializer, UserUpdateSerializer, LoginSerializer
 )
+from .admin_serializers import CompanySettingsSerializer
 from .permissions import CanManageUsers, IsAdminOrManager
+
+
+class CompanySettingsPublicAPIView(APIView):
+    """GET dados da empresa (público: login, PDV, cupom)."""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        obj = CompanySettings.objects.first()
+        if not obj:
+            obj = CompanySettings.objects.create(name='', cpf_cnpj='', address='', address_number='')
+        serializer = CompanySettingsSerializer(obj, context={'request': request})
+        return Response(serializer.data)
 
 
 class UserViewSet(viewsets.ModelViewSet):

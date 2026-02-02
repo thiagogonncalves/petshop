@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Sale, SaleItem, Receipt, Invoice
+from .models import Sale, SaleItem, Receipt, Invoice, CreditAccount, CreditInstallment
 
 
 class SaleItemInline(admin.TabularInline):
@@ -33,3 +33,24 @@ class ReceiptAdmin(admin.ModelAdmin):
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ('invoice_number', 'sale', 'issued_at')
     readonly_fields = ('issued_at',)
+
+
+class CreditInstallmentInline(admin.TabularInline):
+    model = CreditInstallment
+    extra = 0
+    readonly_fields = ('number', 'due_date', 'amount', 'status', 'paid_at', 'paid_amount', 'paid_by')
+
+
+@admin.register(CreditAccount)
+class CreditAccountAdmin(admin.ModelAdmin):
+    list_display = ('id', 'sale', 'client', 'financed_amount', 'installments_count', 'status', 'created_at')
+    list_filter = ('status', 'created_at')
+    search_fields = ('client__name', 'client__document')
+    readonly_fields = ('created_at', 'created_by')
+    inlines = [CreditInstallmentInline]
+
+
+@admin.register(CreditInstallment)
+class CreditInstallmentAdmin(admin.ModelAdmin):
+    list_display = ('id', 'credit_account', 'number', 'due_date', 'amount', 'status', 'paid_at', 'paid_by')
+    list_filter = ('status', 'credit_account')
