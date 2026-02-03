@@ -3,8 +3,8 @@
     class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex flex-col"
     :class="{ 'receipt-print-page': isReceiptPage }"
   >
-    <!-- Navigation -->
-    <nav class="bg-gradient-to-r from-orange-500 to-orange-400 shadow-lg border-b-4 border-blue-500 no-print-nav">
+    <!-- Navigation (fixa como o rodapé) -->
+    <nav class="fixed top-0 left-0 right-0 z-30 bg-gradient-to-r from-orange-500 to-orange-400 shadow-lg border-b-4 border-blue-500 no-print-nav">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex">
@@ -71,8 +71,8 @@
       </div>
     </nav>
 
-    <!-- Main content (padding-bottom para não ficar atrás do rodapé fixo) -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 flex-1 w-full no-print-main pb-20">
+    <!-- Main content (padding-top para nav fixa, padding-bottom para rodapé fixo) -->
+    <main class="max-w-7xl mx-auto pt-20 py-6 sm:px-6 lg:px-8 flex-1 w-full no-print-main pb-20">
       <RouterView />
     </main>
 

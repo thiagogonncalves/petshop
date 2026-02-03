@@ -4,10 +4,15 @@
     <div v-else-if="error" class="p-4 text-center text-red-600">{{ error }}</div>
     <div v-else ref="receiptRef" class="receipt-paper">
       <div class="receipt-header">
+        <img
+          :src="company.logo_url || defaultLogo"
+          :alt="company.name || 'Logo'"
+          class="receipt-logo"
+        />
         <h1 class="receipt-title">{{ company.name || 'GB PET' }}</h1>
         <p v-if="company.cpf_cnpj" class="receipt-cpf">{{ company.cpf_cnpj }}</p>
         <p v-if="company.address" class="receipt-address">{{ company.address }}{{ company.address_number ? ', ' + company.address_number : '' }}</p>
-        <p class="receipt-subtitle">Cupom Fiscal / Comprovante</p>
+        <p class="receipt-subtitle">Cupom Não Fiscal</p>
       </div>
       <div class="receipt-meta">
         <p>Venda #{{ receipt.sale_id }}</p>
@@ -41,6 +46,7 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import defaultLogo from '@/assets/logosemfundo.png'
 import { salesService } from '@/services/sales'
 import { companyService } from '@/services/company'
 
@@ -105,6 +111,7 @@ onMounted(async () => {
   try {
     const { data } = await companyService.get()
     company.value = data || {}
+    document.title = (data?.name || 'GB PET')
   } catch {
     company.value = {}
   }
@@ -140,6 +147,14 @@ watch(() => route.params.id, (id) => {
 .receipt-header {
   text-align: center;
   margin-bottom: 8px;
+}
+
+.receipt-logo {
+  display: block;
+  max-height: 40px;
+  width: auto;
+  margin: 0 auto 6px auto;
+  filter: brightness(0);
 }
 
 .receipt-title {

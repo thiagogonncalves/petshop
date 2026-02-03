@@ -16,6 +16,7 @@ export const useCompanyStore = defineStore('company', {
       try {
         const { data } = await companyService.get()
         this.company = data || null
+        document.title = (data?.name || 'GB PET')
       } catch {
         this.company = null
       }
