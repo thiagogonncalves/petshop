@@ -34,6 +34,13 @@ api.interceptors.response.use(
       authStore.logout()
       window.location.href = '/login'
     }
+    if (error.response?.status === 403 && error.response?.data?.detail === 'subscription_expired') {
+      import('@/stores/subscription').then(({ useSubscriptionStore }) => {
+        const subStore = useSubscriptionStore()
+        subStore.canWrite = false
+        subStore.status = 'expired'
+      })
+    }
     return Promise.reject(error)
   }
 )

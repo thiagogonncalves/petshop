@@ -114,6 +114,12 @@ const router = createRouter({
           meta: { requiresAdmin: true },
         },
         {
+          path: 'admin/plan',
+          name: 'AdminPlanPayment',
+          component: () => import('@/views/admin/PlanPayment.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'admin/users',
           name: 'AdminUsersList',
           component: () => import('@/views/admin/UsersList.vue'),

@@ -8,8 +8,10 @@
         <h1 class="text-2xl font-bold text-blue-800">Agendamentos</h1>
       </div>
       <button
+        type="button"
+        :disabled="!subscriptionStore.canWrite"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="openModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
       >
         Novo Agendamento
       </button>
@@ -41,11 +43,9 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button v-if="appointment.status === 'scheduled'" @click="completeAppointment(appointment.id)" 
-                      class="text-green-600 hover:text-green-900 mr-4">Concluir</button>
-              <button v-if="appointment.status === 'scheduled'" @click="cancelAppointment(appointment.id)" 
-                      class="text-red-600 hover:text-red-900 mr-4">Cancelar</button>
-              <button @click="openModal(appointment)" class="text-blue-600 hover:text-blue-800">Editar</button>
+              <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-green-600 hover:text-green-900 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="completeAppointment(appointment.id)">Concluir</button>
+              <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="cancelAppointment(appointment.id)">Cancelar</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(appointment)">Editar</button>
             </td>
           </tr>
           <tr v-if="appointments.length === 0">
@@ -153,7 +153,9 @@ import { clientsService } from '@/services/clients'
 import { petsService } from '@/services/pets'
 import { servicesService } from '@/services/services'
 import { bookingService } from '@/services/booking'
+import { useSubscriptionStore } from '@/stores/subscription'
 
+const subscriptionStore = useSubscriptionStore()
 const appointments = ref([])
 const clients = ref([])
 const services = ref([])

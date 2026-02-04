@@ -81,7 +81,7 @@
             </div>
             <button
               type="button"
-              :disabled="!currentProduct"
+              :disabled="!currentProduct || !subscriptionStore.canWrite"
               class="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#2a4a7a] disabled:opacity-50 disabled:cursor-not-allowed"
               @click="addCurrentToCart"
             >
@@ -192,7 +192,7 @@
           <div class="p-4">
             <button
               type="button"
-              :disabled="cart.length === 0"
+              :disabled="cart.length === 0 || !subscriptionStore.canWrite"
               class="w-full py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold rounded-lg shadow transition-colors"
               @click="openCheckoutModal"
             >
@@ -380,8 +380,10 @@ import { productsService } from '@/services/products'
 import { clientsService } from '@/services/clients'
 import { salesService } from '@/services/sales'
 import { companyService } from '@/services/company'
+import { useSubscriptionStore } from '@/stores/subscription'
 
 const router = useRouter()
+const subscriptionStore = useSubscriptionStore()
 const authStore = useAuthStore()
 const company = ref({})
 const operatorName = computed(() => {
@@ -478,6 +480,7 @@ onMounted(async () => {
   } catch {
     company.value = {}
   }
+  subscriptionStore.fetchStatus().catch(() => {})
   nextTick(() => searchInputRef.value?.focus())
 })
 

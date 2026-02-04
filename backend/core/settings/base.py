@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     
     # Local apps
     'apps.users',
+    'apps.subscription',
     'apps.clients',
     'apps.pets',
     'apps.products',
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'apps.subscription.middleware.SubscriptionMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -206,3 +208,11 @@ LOGGING = {
 # NF-e: importação por chave de acesso (opcional)
 # Ex: "https://api.exemplo.com/nfe/{access_key}/xml"
 NFE_FETCH_XML_URL_TEMPLATE = config('NFE_FETCH_XML_URL_TEMPLATE', default='')
+
+# Mercado Pago (assinatura)
+MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN', default='')
+MERCADOPAGO_WEBHOOK_URL = config(
+    'MERCADOPAGO_WEBHOOK_URL',
+    default='https://example.com/api/subscription/webhook/'
+)
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')

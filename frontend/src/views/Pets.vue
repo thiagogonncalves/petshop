@@ -8,8 +8,10 @@
         <h1 class="text-2xl font-bold text-blue-800">Animais</h1>
       </div>
       <button
+        type="button"
+        :disabled="!subscriptionStore.canWrite"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="openModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
       >
         Novo Animal
       </button>
@@ -51,8 +53,8 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
               </button>
-              <button @click="openModal(pet)" class="text-blue-600 hover:text-blue-800 mr-4">Editar</button>
-              <button @click="deletePet(pet.id)" class="text-red-600 hover:text-red-900">Excluir</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(pet)">Editar</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deletePet(pet.id)">Excluir</button>
             </td>
           </tr>
           <tr v-if="pets.length === 0">
@@ -180,7 +182,9 @@
 import { ref, onMounted } from 'vue'
 import { petsService } from '@/services/pets'
 import { clientsService } from '@/services/clients'
+import { useSubscriptionStore } from '@/stores/subscription'
 
+const subscriptionStore = useSubscriptionStore()
 const pets = ref([])
 const clients = ref([])
 const showModal = ref(false)

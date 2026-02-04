@@ -62,6 +62,9 @@ export const useAuthStore = defineStore('auth', {
       this.refreshToken = null
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
+      import('@/stores/subscription').then(({ useSubscriptionStore }) => {
+        useSubscriptionStore().reset()
+      }).catch(() => {})
       router.push({ name: 'Login' })
     },
   },

@@ -103,7 +103,10 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCompanyStore } from '@/stores/company'
+import { useSubscriptionStore } from '@/stores/subscription'
 import packageJson from '../../package.json'
+
+const subscriptionStore = useSubscriptionStore()
 
 const route = useRoute()
 const router = useRouter()
@@ -133,6 +136,7 @@ onMounted(() => {
   clockTimer = setInterval(updateClock, 1000)
   window.addEventListener('keydown', onKeydown)
   companyStore.fetchCompany()
+  subscriptionStore.fetchStatus().catch(() => {})
 })
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
@@ -195,6 +199,7 @@ const menuItems = computed(() => {
       type: 'dropdown',
       name: 'Administração',
       children: [
+        { name: 'Plano e Pagamento', path: '/admin/plan' },
         { name: 'Dados da empresa', path: '/admin/company' },
         { name: 'Usuários', path: '/admin/users' },
         { name: 'Novo Usuário', path: '/admin/users/new' },

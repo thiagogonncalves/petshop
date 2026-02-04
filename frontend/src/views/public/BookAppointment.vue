@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen bg-orange-50 p-4 pb-8">
     <div class="max-w-md mx-auto">
+      <div v-if="company.name" class="text-center mb-4">
+        <p class="text-lg font-semibold text-gray-800">{{ company.name }}</p>
+      </div>
       <h1 class="text-2xl font-bold text-orange-800 text-center mb-6">Agendar Serviço</h1>
 
       <!-- Step 1: CPF -->
@@ -148,11 +151,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { bookingService } from '@/services/booking'
+import { companyService } from '@/services/company'
 
 const router = useRouter()
+const company = ref({})
 const step = ref(1)
 const cpf = ref('')
 const cpfError = ref('')
@@ -349,4 +354,14 @@ function formatDateBr(d) {
   if (!d) return ''
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await companyService.get()
+    company.value = data || {}
+    document.title = (data?.name || 'GB PET') + ' - Agendar'
+  } catch {
+    company.value = {}
+  }
+})
 </script>

@@ -10,13 +10,15 @@
       <div class="flex gap-3">
         <router-link
           to="/nfe"
-          class="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-md transition-colors inline-flex items-center"
+          :class="['px-4 py-2 rounded-lg shadow-md inline-flex items-center', subscriptionStore.canWrite ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-gray-200 pointer-events-none']"
         >
           Importar NF-e
         </router-link>
         <button
+          type="button"
+          :disabled="!subscriptionStore.canWrite"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           @click="openModal()"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
         >
           Novo Produto
         </button>
@@ -68,10 +70,10 @@
               </span>
             </td>
             <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-right sticky right-0 bg-white z-10 border-l border-gray-200">
-              <button type="button" @click="openModal(product)" class="mr-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm">
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="mr-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(product)">
                 Editar
               </button>
-              <button type="button" @click="deleteProduct(product.id)" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium text-sm border border-red-200">
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="px-3 py-1.5 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-medium text-sm border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed" @click="deleteProduct(product.id)">
                 Excluir
               </button>
             </td>
@@ -266,8 +268,10 @@
 <script setup>
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { productsService } from '@/services/products'
+import { useSubscriptionStore } from '@/stores/subscription'
 import Pagination from '@/components/Pagination.vue'
 
+const subscriptionStore = useSubscriptionStore()
 const products = ref([])
 const categories = ref([])
 const showModal = ref(false)

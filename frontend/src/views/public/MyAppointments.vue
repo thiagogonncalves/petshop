@@ -1,6 +1,9 @@
 <template>
   <div class="min-h-screen bg-orange-50 p-4 pb-8">
     <div class="max-w-md mx-auto">
+      <div v-if="company.name" class="text-center mb-4">
+        <p class="text-lg font-semibold text-gray-800">{{ company.name }}</p>
+      </div>
       <h1 class="text-2xl font-bold text-orange-800 text-center mb-6">Meus Agendamentos</h1>
 
       <div class="bg-white rounded-xl shadow-lg p-6 mb-4">
@@ -46,9 +49,11 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { bookingService } from '@/services/booking'
+import { companyService } from '@/services/company'
 
+const company = ref({})
 const cpf = ref('')
 const appointments = ref([])
 const loading = ref(false)
@@ -99,4 +104,14 @@ function getStatusBorderClass(status) {
   }
   return map[status] || 'border-gray-300'
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await companyService.get()
+    company.value = data || {}
+    document.title = (data?.name || 'GB PET') + ' - Meus Agendamentos'
+  } catch {
+    company.value = {}
+  }
+})
 </script>

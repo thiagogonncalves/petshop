@@ -8,8 +8,10 @@
         <h1 class="text-2xl font-bold text-blue-800">Categorias</h1>
       </div>
       <button
+        type="button"
+        :disabled="!subscriptionStore.canWrite"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="openModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
       >
         Nova Categoria
       </button>
@@ -36,8 +38,8 @@
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button @click="openModal(cat)" class="text-blue-600 hover:text-blue-800 mr-4">Editar</button>
-              <button @click="deleteCategory(cat.id)" class="text-red-600 hover:text-red-900">Excluir</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(cat)">Editar</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deleteCategory(cat.id)">Excluir</button>
             </td>
           </tr>
           <tr v-if="categories.length === 0">
@@ -88,7 +90,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { productsService } from '@/services/products'
+import { useSubscriptionStore } from '@/stores/subscription'
 
+const subscriptionStore = useSubscriptionStore()
 const categories = ref([])
 const showModal = ref(false)
 const editingCategory = ref(null)

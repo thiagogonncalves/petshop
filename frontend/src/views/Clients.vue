@@ -8,8 +8,10 @@
         <h1 class="text-2xl font-bold text-blue-800">Clientes</h1>
       </div>
       <button
+        type="button"
+        :disabled="!subscriptionStore.canWrite"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         @click="openModal()"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors"
       >
         Novo Cliente
       </button>
@@ -44,8 +46,8 @@
               <router-link :to="{ name: 'ClientCredits', params: { clientId: client.id } }" class="text-orange-600 hover:text-orange-800 mr-4">
                 Crediário
               </router-link>
-              <button @click="openModal(client)" class="text-blue-600 hover:text-blue-800 mr-4">Editar</button>
-              <button @click="deleteClient(client.id)" class="text-red-600 hover:text-red-900">Excluir</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(client)">Editar</button>
+              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deleteClient(client.id)">Excluir</button>
             </td>
           </tr>
           <tr v-if="clients.length === 0">
@@ -171,8 +173,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { clientsService } from '@/services/clients'
+import { useSubscriptionStore } from '@/stores/subscription'
 import Pagination from '@/components/Pagination.vue'
 
+const subscriptionStore = useSubscriptionStore()
 const clients = ref([])
 const showModal = ref(false)
 const editingClient = ref(null)
