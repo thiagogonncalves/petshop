@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 
 echo "Aguardando PostgreSQL..."
-while ! python -c "
+while ! python - <<'EOF'
 import os
 import psycopg2
-from django.conf import settings
+
 try:
     conn = psycopg2.connect(
         dbname=os.environ.get('DB_NAME', 'petshop_db'),
@@ -19,12 +19,15 @@ try:
     exit(0)
 except Exception:
     exit(1)
-" 2>/dev/null; do
+EOF
+do
   sleep 1
 done
+
 echo "PostgreSQL pronto."
 
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput --clear
 
+echo "Iniciando Gunicorn..."
 exec "$@"

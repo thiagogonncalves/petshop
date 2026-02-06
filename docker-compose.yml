@@ -13,6 +13,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks: [internal]
 
   backend:
     build:
@@ -40,6 +41,7 @@ services:
         condition: service_healthy
     volumes:
       - media_data:/app/media
+    networks: [internal]
 
   frontend:
     build:
@@ -49,8 +51,14 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "0.0.0.0:8082:80"
+    networks: [internal]
 
 volumes:
   postgres_data:
   media_data:
+
+
+networks:
+  internal:
+    driver: bridge
