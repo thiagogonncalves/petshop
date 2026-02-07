@@ -14,7 +14,7 @@ def create_default_plan_and_subscription(apps, schema_editor):
     plan, _ = Plan.objects.get_or_create(
         name='Plano Mensal',
         defaults={
-            'price': 139.90,
+            'price': 149.90,
             'description': 'Acesso completo ao sistema de gestão para pet shop',
             'is_active': True,
         }

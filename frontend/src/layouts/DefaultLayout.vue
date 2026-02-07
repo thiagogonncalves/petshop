@@ -1,10 +1,10 @@
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex flex-col"
+    class="min-h-screen flex flex-col"
     :class="{ 'receipt-print-page': isReceiptPage }"
   >
     <!-- Navigation (fixa como o rodapé) -->
-    <nav class="fixed top-0 left-0 right-0 z-30 bg-gradient-to-r from-orange-500 to-orange-400 shadow-lg border-b-4 border-blue-500 no-print-nav">
+    <nav class="fixed top-0 left-0 right-0 z-30 theme-nav shadow-lg no-print-nav">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex">
@@ -20,8 +20,8 @@
                 <router-link
                   v-if="item.type !== 'dropdown'"
                   :to="item.path"
-                  class="border-transparent text-white hover:text-blue-100 hover:bg-orange-600 inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors rounded-t-lg"
-                  exact-active-class="border-blue-800 text-white bg-orange-600"
+                  class="theme-nav-link border-transparent text-white inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors rounded-t-lg"
+                  exact-active-class="theme-nav-link-active"
                 >
                   {{ item.name }}
                 </router-link>
@@ -31,8 +31,8 @@
                   class="relative group"
                 >
                   <span
-                    class="border-transparent text-white hover:text-blue-100 hover:bg-orange-600 inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors rounded-t-lg cursor-pointer"
-                    :class="{ 'border-blue-800 bg-orange-600': isCadastroActive || (item.name === 'Crediário' && isCreditsActive) || (item.name === 'Relatórios' && isReportsActive) || (item.name === 'Administração' && isAdminActive) }"
+                    class="theme-nav-link border-transparent text-white inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors rounded-t-lg cursor-pointer"
+                    :class="{ 'theme-nav-link-active': isCadastroActive || (item.name === 'Crediário' && isCreditsActive) || (item.name === 'Relatórios' && isReportsActive) || (item.name === 'Administração' && isAdminActive) }"
                   >
                     {{ item.name }}
                     <svg class="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -42,13 +42,13 @@
                   <div
                     class="absolute left-0 top-full pt-1 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50"
                   >
-                    <div class="py-1 bg-white rounded-lg shadow-lg border border-orange-200 min-w-[160px]">
+                    <div class="py-1 bg-white rounded-lg shadow-lg border-2 theme-card min-w-[160px]">
                       <router-link
                         v-for="child in item.children"
                         :key="child.name"
                         :to="{ path: child.path, query: child.query || {} }"
-                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-700"
-                        active-class="!bg-orange-100 !text-orange-800 font-medium"
+                        class="block px-4 py-2 text-sm text-gray-700 theme-dropdown-link"
+                        active-class="theme-dropdown-link active font-medium"
                       >
                         {{ child.name }}
                       </router-link>
@@ -62,7 +62,7 @@
             <span class="text-sm text-white font-medium">{{ userDisplayName }}</span>
             <button
               @click="logout"
-              class="text-sm text-white hover:text-blue-100 transition-colors bg-orange-600 hover:bg-orange-700 px-3 py-1 rounded-lg"
+              class="text-sm text-white theme-nav-btn px-3 py-1 rounded-lg"
             >
               Sair
             </button>
@@ -77,7 +77,7 @@
     </main>
 
     <!-- Footer fixo no final da tela: tudo na mesma linha -->
-    <footer class="fixed bottom-0 left-0 right-0 z-30 bg-gradient-to-r from-orange-500 to-orange-400 border-t-4 border-blue-500 no-print-footer">
+    <footer class="fixed bottom-0 left-0 right-0 z-30 theme-footer no-print-footer">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3">
         <div class="flex flex-row items-center justify-center gap-3 sm:gap-6 flex-wrap text-white text-sm sm:text-base">
           <router-link to="/" class="flex items-center flex-shrink-0">
@@ -202,7 +202,6 @@ const menuItems = computed(() => {
         { name: 'Plano e Pagamento', path: '/admin/plan' },
         { name: 'Dados da empresa', path: '/admin/company' },
         { name: 'Usuários', path: '/admin/users' },
-        { name: 'Novo Usuário', path: '/admin/users/new' },
         { name: 'Perfis e Permissões', path: '/admin/roles' },
         { name: 'Logs de Acesso', path: '/admin/audit' },
         { name: 'Configurações', path: '/admin/settings' },

@@ -79,7 +79,11 @@ class SaleViewSet(viewsets.ModelViewSet):
                 if item.product:
                     product = item.product
                     previous_stock = product.stock_quantity
-                    new_stock = previous_stock - item.quantity
+                    if product.unit == 'KG' and getattr(item, 'sold_by_kg', False):
+                        stock_delta = int(round(float(item.quantity) * 1000))
+                    else:
+                        stock_delta = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
+                    new_stock = previous_stock - stock_delta
                     
                     if new_stock < 0:
                         return Response(
@@ -95,7 +99,7 @@ class SaleViewSet(viewsets.ModelViewSet):
                     StockMovement.objects.create(
                         product=product,
                         movement_type='exit',
-                        quantity=item.quantity,
+                        quantity=stock_delta,
                         previous_stock=previous_stock,
                         new_stock=new_stock,
                         observation=f'Saída por venda #{sale.id}',
@@ -182,11 +186,25 @@ class SaleViewSet(viewsets.ModelViewSet):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 qty = item_data['quantity']
-                if product.stock_quantity < qty:
-                    return Response(
-                        {'items': f'Estoque insuficiente para {product.name}. Disponível: {product.stock_quantity}'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                sold_by_kg = item_data.get('sold_by_kg', False)
+                # Para produtos KG vendidos por kg: estoque em gramas (qty_grams)
+                if product.unit == 'KG' and sold_by_kg:
+                    qty_grams = int(round(float(qty) * 1000))
+                    if product.stock_quantity < qty_grams:
+                        disp_kg = product.stock_quantity / 1000
+                        return Response(
+                            {'items': f'Estoque insuficiente para {product.name}. Disponível: {disp_kg:.3f} kg'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    stock_delta = qty_grams
+                else:
+                    qty_int = int(qty) if qty == int(qty) else int(round(float(qty)))
+                    if product.stock_quantity < qty_int:
+                        return Response(
+                            {'items': f'Estoque insuficiente para {product.name}. Disponível: {product.stock_quantity}'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+                    stock_delta = qty_int
                 unit_price = item_data['unit_price']
                 item_discount = item_data.get('discount') or 0
                 SaleItem.objects.create(
@@ -194,16 +212,17 @@ class SaleViewSet(viewsets.ModelViewSet):
                     item_type='product',
                     product=product,
                     quantity=qty,
+                    sold_by_kg=sold_by_kg,
                     unit_price=unit_price,
                     discount=item_discount,
                 )
                 prev = product.stock_quantity
-                product.stock_quantity = prev - qty
+                product.stock_quantity = prev - stock_delta
                 product.save(update_fields=['stock_quantity'])
                 StockMovement.objects.create(
                     product=product,
                     movement_type='exit',
-                    quantity=qty,
+                    quantity=stock_delta,
                     previous_stock=prev,
                     new_stock=product.stock_quantity,
                     reference=f'Venda #{sale.id}',

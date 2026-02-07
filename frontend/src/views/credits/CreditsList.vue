@@ -48,9 +48,9 @@
     </div>
 
     <!-- Tabela -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 border-orange-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gradient-to-r from-orange-400 to-orange-300">
+        <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Cliente</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Total financiado</th>
@@ -104,7 +104,7 @@
     </div>
 
     <!-- Previsão de entrada pelas parcelas em aberto -->
-    <div class="mt-4 bg-white rounded-lg shadow border-2 border-orange-200 p-4">
+    <div class="mt-4 bg-white rounded-lg shadow border-2 theme-card p-4">
       <h2 class="text-sm font-semibold text-gray-700 mb-2">Previsão de entrada pelas parcelas em aberto</h2>
       <p class="text-2xl font-bold text-orange-600">R$ {{ formatPrice(forecastTotal) }}</p>
       <p class="text-xs text-gray-500 mt-1">Soma do valor das parcelas pendentes e atrasadas (crediários em aberto)</p>

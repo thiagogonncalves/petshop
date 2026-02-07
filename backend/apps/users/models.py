@@ -93,6 +93,10 @@ class User(AbstractUser):
         verbose_name='Telefone'
     )
     is_active = models.BooleanField(default=True, verbose_name='Ativo')
+    must_change_password = models.BooleanField(
+        default=False,
+        verbose_name='Alterar senha no próximo login'
+    )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
 
@@ -143,9 +147,15 @@ class User(AbstractUser):
         return permission_code in user_permissions
 
 
+class ThemeChoice(models.TextChoices):
+    ORANGE = 'orange', 'Laranja e Azul (padrão)'
+    GREEN = 'green', 'Verde e Verde-água'
+    PURPLE = 'purple', 'Roxo e Rosa'
+
+
 class CompanySettings(models.Model):
     """
-    Dados da empresa (singleton): logo, nome, CPF/CNPJ, endereço.
+    Dados da empresa (singleton): logo, nome, CPF/CNPJ, endereço, tema.
     Usado na tela de login, PDV e cupom.
     """
     name = models.CharField(max_length=200, blank=True, verbose_name='Nome da empresa')
@@ -153,6 +163,12 @@ class CompanySettings(models.Model):
     address = models.CharField(max_length=300, blank=True, verbose_name='Endereço')
     address_number = models.CharField(max_length=20, blank=True, verbose_name='Número')
     logo = models.ImageField(upload_to='company/', blank=True, null=True, verbose_name='Logo (PNG)')
+    theme = models.CharField(
+        max_length=20,
+        choices=ThemeChoice.choices,
+        default=ThemeChoice.ORANGE,
+        verbose_name='Tema de cores'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

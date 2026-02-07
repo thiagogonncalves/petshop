@@ -2,9 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Theme variables - Laranja/Azul (padrão) */
+:root,
+[data-theme="orange"] {
+  --theme-nav-from: #f97316;
+  --theme-nav-to: #fb923c;
+  --theme-accent: #3b82f6;
+  --theme-accent-dark: #2563eb;
+  --theme-bg-from: #fff7ed;
+  --theme-bg-via: #ffffff;
+  --theme-bg-to: #eff6ff;
+  --theme-hover: #ea580c;
+}
+
+[data-theme="green"] {
+  --theme-nav-from: #10b981;
+  --theme-nav-to: #34d399;
+  --theme-accent: #14b8a6;
+  --theme-accent-dark: #0d9488;
+  --theme-bg-from: #ecfdf5;
+  --theme-bg-via: #ffffff;
+  --theme-bg-to: #f0fdfa;
+  --theme-hover: #059669;
+}
+
+[data-theme="purple"] {
+  --theme-nav-from: #8b5cf6;
+  --theme-nav-to: #a78bfa;
+  --theme-accent: #ec4899;
+  --theme-accent-dark: #db2777;
+  --theme-bg-from: #f5f3ff;
+  --theme-bg-via: #ffffff;
+  --theme-bg-to: #fdf2f8;
+  --theme-hover: #7c3aed;
+}
+
+/* Extras para login, cards, tabelas */
+:root,
+[data-theme="orange"] {
+  --theme-card-border: #fed7aa;
+  --theme-table-header: linear-gradient(to right, #fb923c, #fdba74);
+  --theme-login-from: #fb923c;
+  --theme-login-via: #fdba74;
+  --theme-login-to: #60a5fa;
+}
+
+[data-theme="green"] {
+  --theme-card-border: #6ee7b7;
+  --theme-table-header: linear-gradient(to right, #34d399, #6ee7b7);
+  --theme-login-from: #34d399;
+  --theme-login-via: #6ee7b7;
+  --theme-login-to: #2dd4bf;
+}
+
+[data-theme="purple"] {
+  --theme-card-border: #c4b5fd;
+  --theme-table-header: linear-gradient(to right, #a78bfa, #c4b5fd);
+  --theme-login-from: #a78bfa;
+  --theme-login-via: #c4b5fd;
+  --theme-login-to: #f472b6;
+}
+
 body {
-  @apply bg-gradient-to-br from-orange-50 via-white to-blue-50;
+  background: linear-gradient(to bottom right, var(--theme-bg-from), var(--theme-bg-via), var(--theme-bg-to));
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.theme-nav {
+  background: linear-gradient(to right, var(--theme-nav-from), var(--theme-nav-to)) !important;
+  border-bottom: 4px solid var(--theme-accent) !important;
+}
+
+.theme-footer {
+  background: linear-gradient(to right, var(--theme-nav-from), var(--theme-nav-to)) !important;
+  border-top: 4px solid var(--theme-accent) !important;
+}
+
+.theme-btn-primary {
+  background-color: var(--theme-nav-from) !important;
+}
+.theme-btn-primary:hover {
+  background-color: var(--theme-hover) !important;
+}
+
+/* Barra superior - links e botão */
+.theme-nav-link:hover {
+  background-color: var(--theme-hover) !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+.theme-nav-link-active {
+  border-color: var(--theme-accent-dark) !important;
+  background-color: var(--theme-hover) !important;
+  color: white !important;
+}
+.theme-nav-btn {
+  background-color: var(--theme-hover) !important;
+}
+.theme-nav-btn:hover {
+  background-color: var(--theme-accent-dark) !important;
+  color: white !important;
+}
+
+/* Login, cards, tabelas, botões primários */
+.theme-login-bg {
+  background: linear-gradient(to bottom, var(--theme-login-from), var(--theme-login-via), var(--theme-login-to)) !important;
+}
+.theme-card {
+  border-color: var(--theme-card-border) !important;
+}
+.theme-table-header {
+  background: var(--theme-table-header) !important;
+}
+.theme-dropdown-link:hover {
+  background-color: var(--theme-bg-from) !important;
+  color: var(--theme-nav-from) !important;
+}
+.theme-dropdown-link.active {
+  background-color: var(--theme-card-border) !important;
+  color: var(--theme-accent-dark) !important;
+}
+.theme-accent-fill {
+  fill: var(--theme-accent);
+  color: var(--theme-accent);
+}
+.theme-accent-text {
+  color: var(--theme-accent-dark);
+}
+.theme-input-focus:focus {
+  --tw-ring-color: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+.theme-focus-ring:focus {
+  --tw-ring-color: var(--theme-accent);
 }
 
 /* Estilos para inputs */
@@ -37,7 +166,7 @@ button {
 
 /* Cards */
 .card {
-  @apply bg-white rounded-lg shadow-lg p-6 border-2 border-orange-200;
+  @apply bg-white rounded-lg shadow-lg p-6 border-2 theme-card;
 }
 
 /* Paw Print Animation */

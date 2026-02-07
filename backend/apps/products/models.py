@@ -41,7 +41,16 @@ class Product(models.Model):
     barcode = models.CharField(max_length=50, blank=True, unique=True, null=True, verbose_name='Código de Barras')
     gtin = models.CharField(max_length=14, blank=True, null=True, verbose_name='GTIN/EAN')
 
-    unit = models.CharField(max_length=20, default='UN', verbose_name='Unidade')
+    UNIT_CHOICES = [
+        ('UN', 'Unidade'),
+        ('KG', 'Quilograma (kg)'),
+    ]
+    unit = models.CharField(
+        max_length=20,
+        choices=UNIT_CHOICES,
+        default='UN',
+        verbose_name='Unidade'
+    )
 
     # Pricing
     cost_price = models.DecimalField(
@@ -68,6 +77,14 @@ class Product(models.Model):
     price_manually_set = models.BooleanField(
         default=False,
         verbose_name='Preço definido manualmente'
+    )
+    price_per_kg = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Preço por kg (quando unidade é KG)'
     )
 
     # Inventory (kept in sync with StockMovement balance for performance)
@@ -109,6 +126,8 @@ class Product(models.Model):
     @property
     def is_low_stock(self):
         """Check if product is below minimum stock"""
+        if self.unit == 'KG':
+            return (self.stock_quantity / 1000) <= self.min_stock
         return self.stock_quantity <= self.min_stock
 
     def recalculate_sale_price(self):

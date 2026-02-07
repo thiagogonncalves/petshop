@@ -38,14 +38,30 @@
                 @input="onSearchInput"
               />
             </div>
+            <!-- Para produto em KG: escolher unidade inteira ou venda por kg -->
+            <div v-if="currentProduct?.unit === 'KG'" class="space-y-2 mb-2">
+              <label class="block text-xs font-medium text-gray-600">Forma de venda</label>
+              <div class="flex gap-4">
+                <label class="flex items-center">
+                  <input v-model="soldByKgChoice" type="radio" value="whole" class="mr-2">
+                  <span class="text-sm">Unidade inteira</span>
+                </label>
+                <label class="flex items-center">
+                  <input v-model="soldByKgChoice" type="radio" value="kg" class="mr-2">
+                  <span class="text-sm">Venda por kg</span>
+                </label>
+              </div>
+            </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-0.5">Quantidade</label>
+                <label class="block text-xs font-medium text-gray-600 mb-0.5">
+                  {{ currentProduct?.unit === 'KG' && soldByKgChoice === 'kg' ? 'Quantidade (kg)' : 'Quantidade' }}
+                </label>
                 <input
                   v-model.number="quantityToAdd"
-                  type="number"
-                  min="1"
-                  step="0.001"
+                  :type="(currentProduct?.unit === 'KG' && soldByKgChoice === 'kg') ? 'number' : 'number'"
+                  :min="(currentProduct?.unit === 'KG' && soldByKgChoice === 'kg') ? 0.001 : 1"
+                  :step="(currentProduct?.unit === 'KG' && soldByKgChoice === 'kg') ? 0.001 : 1"
                   class="w-full px-2 py-1.5 border border-gray-300 rounded text-sm"
                   @keydown.enter.prevent="addCurrentToCart"
                 />
@@ -100,7 +116,10 @@
               @click="selectProduct(p)"
             >
               <span class="font-medium text-gray-800 truncate flex-1">{{ p.name }}</span>
-              <span class="text-[#1e3a5f] font-semibold ml-2">R$ {{ formatPrice(p.sale_price) }}</span>
+              <span class="text-[#1e3a5f] font-semibold ml-2">
+                R$ {{ formatPrice(p.sale_price) }}
+                <template v-if="p.unit === 'KG' && p.price_per_kg"> / {{ formatPrice(p.price_per_kg) }}/kg</template>
+              </span>
             </button>
           </div>
         </div>
@@ -134,8 +153,9 @@
                     <input
                       v-model.number="line.quantity"
                       type="number"
-                      min="1"
-                      class="w-14 text-right border border-gray-300 rounded px-1 py-0.5 text-sm"
+                      :min="line.sold_by_kg ? 0.001 : 1"
+                      :step="line.sold_by_kg ? 0.001 : 1"
+                      class="w-16 text-right border border-gray-300 rounded px-1 py-0.5 text-sm"
                       @change="normalizeQuantity(line)"
                     />
                   </td>
@@ -397,6 +417,7 @@ const searchQuery = ref('')
 const suggestions = ref([])
 const currentProduct = ref(null)
 const quantityToAdd = ref(1)
+const soldByKgChoice = ref('whole')
 const unitPriceToAdd = ref('')
 const discountToAdd = ref('0')
 const cart = ref([])
@@ -550,7 +571,7 @@ function parseDecimal(str) {
 }
 
 const lineTotalToAdd = computed(() => {
-  const qty = Number(quantityToAdd.value) || 0
+  const qty = parseFloat(quantityToAdd.value) || 0
   const price = parseDecimal(unitPriceToAdd.value)
   return Math.max(0, qty * price)
 })
@@ -560,7 +581,7 @@ const subtotal = computed(() => {
 })
 
 function lineTotal(line) {
-  const qty = Number(line.quantity) || 0
+  const qty = parseFloat(line.quantity) || 0
   const price = Number(line.unit_price) || 0
   const disc = Number(line.discount) || 0
   return Math.max(0, qty * price - disc)
@@ -573,11 +594,24 @@ const cartTotal = computed(() => {
 
 watch(currentProduct, (p) => {
   if (p) {
+    soldByKgChoice.value = 'whole'
     unitPriceToAdd.value = String(p.sale_price ?? 0).replace('.', ',')
     quantityToAdd.value = 1
     discountToAdd.value = '0'
   }
 }, { immediate: true })
+
+watch(soldByKgChoice, (val) => {
+  const p = currentProduct.value
+  if (!p || p.unit !== 'KG') return
+  if (val === 'whole') {
+    unitPriceToAdd.value = String(p.sale_price ?? 0).replace('.', ',')
+    quantityToAdd.value = 1
+  } else {
+    unitPriceToAdd.value = String(p.price_per_kg ?? 0).replace('.', ',')
+    quantityToAdd.value = 0.5
+  }
+})
 
 let searchDebounce = null
 function onSearchInput() {
@@ -645,32 +679,38 @@ function onSearchEnter() {
 function addCurrentToCart() {
   const p = currentProduct.value
   if (!p) return
-  const qty = Math.max(1, Number(quantityToAdd.value) || 1)
-  const price = parseDecimal(unitPriceToAdd.value) || parseFloat(p.sale_price) || 0.01
+  const isKgProduct = p.unit === 'KG'
+  const sellByKg = isKgProduct && soldByKgChoice.value === 'kg'
+  const qty = sellByKg
+    ? Math.max(0.001, parseFloat(quantityToAdd.value) || 0.001)
+    : Math.max(1, parseInt(quantityToAdd.value) || 1)
+  const price = parseDecimal(unitPriceToAdd.value) || (sellByKg ? parseFloat(p.price_per_kg) : parseFloat(p.sale_price)) || 0.01
   const disc = Math.max(0, parseDecimal(discountToAdd.value))
-  const existing = cart.value.find(l => l.product_id === p.id && l.unit_price === price)
+  const existing = cart.value.find(l => l.product_id === p.id && l.unit_price === price && l.sold_by_kg === sellByKg)
   if (existing) {
-    existing.quantity += qty
+    existing.quantity = (parseFloat(existing.quantity) || 0) + qty
     existing.discount = (Number(existing.discount) || 0) + disc
   } else {
     cart.value.push({
       product_id: p.id,
-      name: p.name,
+      name: p.name + (sellByKg ? ' (kg)' : ''),
       unit_price: price,
       quantity: qty,
       discount: disc,
+      sold_by_kg: sellByKg,
     })
   }
   searchQuery.value = ''
   suggestions.value = []
-  quantityToAdd.value = 1
-  unitPriceToAdd.value = String(p.sale_price ?? 0).replace('.', ',')
+  quantityToAdd.value = sellByKg ? 0.5 : 1
+  unitPriceToAdd.value = sellByKg ? String(p.price_per_kg ?? 0).replace('.', ',') : String(p.sale_price ?? 0).replace('.', ',')
   discountToAdd.value = '0'
   nextTick(() => searchInputRef.value?.focus())
 }
 
 function normalizeQuantity(line) {
-  if (line.quantity < 1) line.quantity = 1
+  const min = line.sold_by_kg ? 0.001 : 1
+  if (parseFloat(line.quantity) < min) line.quantity = min
 }
 
 function normalizeDiscount(line) {
@@ -736,7 +776,8 @@ function searchClientByCpf() {
 function confirmSale() {
   const items = cart.value.map(l => ({
     product_id: l.product_id,
-    quantity: l.quantity,
+    quantity: String(parseFloat(l.quantity) || 1),
+    sold_by_kg: Boolean(l.sold_by_kg),
     unit_price: String(l.unit_price),
     discount: String(Number(l.discount) || 0),
   }))

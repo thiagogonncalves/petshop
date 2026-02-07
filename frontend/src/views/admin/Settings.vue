@@ -7,8 +7,31 @@
       <h1 class="text-2xl font-bold text-gray-800">Configurações do Sistema</h1>
     </div>
 
+    <!-- Tema de cores -->
+    <div class="bg-white rounded-lg shadow border-2 theme-card p-6 mb-6">
+      <h2 class="text-lg font-semibold text-gray-800 mb-4">Tema de cores do sistema</h2>
+      <p class="text-sm text-gray-600 mb-4">Escolha o visual que melhor combina com sua marca.</p>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <button
+          v-for="opt in themeOptions"
+          :key="opt.value"
+          type="button"
+          @click="selectTheme(opt.value)"
+          :class="[
+            'p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2',
+            currentTheme === opt.value
+              ? 'border-orange-500 bg-orange-50 shadow-md'
+              : 'border-gray-200 hover:border-gray-300 bg-white'
+          ]"
+        >
+          <div class="w-16 h-16 rounded-lg shadow-inner flex-shrink-0" :style="{ background: opt.gradient }"></div>
+          <span class="font-medium text-gray-800 text-sm">{{ opt.label }}</span>
+        </button>
+      </div>
+    </div>
+
     <!-- Horário de Funcionamento -->
-    <div class="bg-white rounded-lg shadow border-2 border-orange-200 p-6 mb-6">
+    <div class="bg-white rounded-lg shadow border-2 theme-card p-6 mb-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-4">Horário de Funcionamento</h2>
       <div class="space-y-4">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -69,7 +92,7 @@
     </div>
 
     <!-- Fechamentos (feriados/folgas) -->
-    <div class="bg-white rounded-lg shadow border-2 border-orange-200 p-6">
+    <div class="bg-white rounded-lg shadow border-2 theme-card p-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-4">Datas de Fechamento</h2>
       <div class="flex flex-wrap gap-3 mb-4">
         <input v-model="newClosure.date" type="date" class="px-3 py-2 border border-gray-300 rounded-lg">
@@ -92,8 +115,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { settingsService } from '@/services/settings'
+import { adminCompanyService } from '@/services/company'
+import { useCompanyStore } from '@/stores/company'
+
+const companyStore = useCompanyStore()
+
+const themeOptions = [
+  { value: 'orange', label: 'Laranja e Azul', gradient: 'linear-gradient(135deg, #f97316 0%, #3b82f6 100%)' },
+  { value: 'green', label: 'Verde e Verde-água', gradient: 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)' },
+  { value: 'purple', label: 'Roxo e Rosa', gradient: 'linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%)' },
+]
+
+const currentTheme = computed(() => companyStore.theme)
+
+async function selectTheme(theme) {
+  try {
+    const list = await adminCompanyService.get()
+    const id = list?.data?.id
+    if (!id) { alert('Empresa não encontrada.'); return }
+    await adminCompanyService.update(id, { theme })
+    companyStore.setTheme(theme)
+    alert('Tema alterado com sucesso!')
+  } catch (e) {
+    alert(e.response?.data?.detail || 'Erro ao salvar tema.')
+  }
+}
 
 const saving = ref(false)
 const config = ref({

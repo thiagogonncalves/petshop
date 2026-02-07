@@ -17,6 +17,7 @@ class SaleItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'item_type', 'item_type_display', 'product', 'product_name',
             'service', 'service_name', 'appointment', 'quantity',
+            'sold_by_kg',
             'unit_price', 'discount', 'total'
         ]
         read_only_fields = ['id', 'total']
@@ -31,23 +32,30 @@ class SaleItemSerializer(serializers.ModelSerializer):
         if attrs['item_type'] == 'product' and attrs.get('product'):
             product = attrs['product']
             quantity = attrs.get('quantity', 1)
+            sold_by_kg = attrs.get('sold_by_kg', False)
+            if product.unit == 'KG' and sold_by_kg:
+                qty_grams = int(round(float(quantity) * 1000))
+                stock_needed = qty_grams
+            else:
+                qty_int = int(quantity) if quantity == int(quantity) else int(round(float(quantity)))
+                stock_needed = qty_int
             
-            # Check if updating existing item
             if self.instance:
-                old_quantity = self.instance.quantity
-                # Calculate the difference
-                quantity_diff = quantity - old_quantity
-                
-                # Only check stock if we're increasing quantity
+                old_qty = self.instance.quantity
+                old_sold_kg = getattr(self.instance, 'sold_by_kg', False)
+                if product.unit == 'KG' and old_sold_kg:
+                    old_needed = int(round(float(old_qty) * 1000))
+                else:
+                    old_needed = int(old_qty) if old_qty == int(old_qty) else int(round(float(old_qty)))
+                quantity_diff = stock_needed - old_needed
                 if quantity_diff > 0 and product.stock_quantity < quantity_diff:
                     raise serializers.ValidationError({
-                        'quantity': f'Estoque insuficiente. Disponível: {product.stock_quantity}, Solicitado: {quantity_diff}'
+                        'quantity': f'Estoque insuficiente. Disponível: {product.stock_quantity}'
                     })
             else:
-                # New item - check if stock is available
-                if product.stock_quantity < quantity:
+                if product.stock_quantity < stock_needed:
                     raise serializers.ValidationError({
-                        'quantity': f'Estoque insuficiente. Disponível: {product.stock_quantity}, Solicitado: {quantity}'
+                        'quantity': f'Estoque insuficiente. Disponível: {product.stock_quantity}'
                     })
         
         return attrs
@@ -122,7 +130,8 @@ class InvoiceSerializer(serializers.ModelSerializer):
 class PdvSaleItemInputSerializer(serializers.Serializer):
     """Input for PDV sale item (product only)."""
     product_id = serializers.IntegerField()
-    quantity = serializers.IntegerField(min_value=1)
+    quantity = serializers.DecimalField(max_digits=12, decimal_places=4, min_value=Decimal('0.0001'))
+    sold_by_kg = serializers.BooleanField(required=False, default=False)
     unit_price = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
     discount = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=Decimal('0.00'),

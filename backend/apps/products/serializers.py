@@ -28,6 +28,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'category', 'category_name',
             'barcode', 'sku', 'gtin', 'unit',
             'cost_price', 'profit_margin', 'sale_price', 'price_manually_set',
+            'price_per_kg',
             'stock_quantity', 'min_stock', 'is_low_stock',
             'image', 'image_url',
             'is_active', 'created_at', 'updated_at'
@@ -50,7 +51,7 @@ class ProductPdvSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'sku', 'gtin', 'sale_price', 'stock_balance', 'image_url']
+        fields = ['id', 'name', 'sku', 'gtin', 'unit', 'sale_price', 'price_per_kg', 'stock_balance', 'image_url']
 
     def get_image_url(self, obj):
         if obj.image:

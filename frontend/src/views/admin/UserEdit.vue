@@ -6,7 +6,7 @@
     </div>
 
     <div v-if="loading" class="text-center text-gray-500">Carregando...</div>
-    <div v-else class="bg-white shadow-lg rounded-lg border-2 border-orange-200 p-6 max-w-2xl">
+    <div v-else class="bg-white shadow-lg rounded-lg border-2 theme-card p-6 max-w-2xl">
       <form @submit.prevent="save">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div class="md:col-span-2">

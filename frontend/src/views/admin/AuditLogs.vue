@@ -6,7 +6,7 @@
       </svg>
       <h1 class="text-2xl font-bold text-blue-800">Logs de Acesso</h1>
     </div>
-    <div class="bg-white rounded-lg shadow border-2 border-orange-200 p-8 text-center text-gray-500">
+    <div class="bg-white rounded-lg shadow border-2 theme-card p-8 text-center text-gray-500">
       <p class="text-lg">Em breve.</p>
       <p class="text-sm mt-2">A auditoria de acesso será disponibilizada em uma próxima versão.</p>
     </div>

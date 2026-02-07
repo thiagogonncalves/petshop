@@ -51,9 +51,9 @@
       </div>
     </div>
 
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 border-orange-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gradient-to-r from-orange-400 to-orange-300">
+        <thead class="theme-table-header">
           <tr>
             <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase">ID</th>
             <th class="px-4 py-3 text-left text-xs font-medium text-white uppercase">Data</th>

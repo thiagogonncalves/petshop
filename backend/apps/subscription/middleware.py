@@ -15,6 +15,7 @@ from .models import Subscription, SubscriptionStatus
 ALLOWED_PATHS = [
     r'^/api/auth/users/login/?$',
     r'^/api/auth/token/refresh/?$',
+    r'^/api/auth/first-login/?$',
     r'^/api/subscription/pay/?$',
     r'^/api/subscription/webhook/?$',
     r'^/api/subscription/status/?$',  # GET já permitido; POST se existir

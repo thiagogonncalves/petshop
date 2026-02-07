@@ -20,4 +20,13 @@ export const authService = {
     const response = await api.get('/auth/users/me/')
     return response.data
   },
+
+  async firstLoginChangePassword(newUsername, newPassword, newPasswordConfirm) {
+    const response = await api.post('/auth/first-login/', {
+      new_username: newUsername,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    })
+    return response.data
+  },
 }

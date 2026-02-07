@@ -11,6 +11,12 @@ const router = createRouter({
       meta: { requiresAuth: false }
     },
     {
+      path: '/first-login',
+      name: 'FirstLogin',
+      component: () => import('@/views/FirstLogin.vue'),
+      meta: { requiresAuth: true, requiresFirstLogin: true }
+    },
+    {
       path: '/agendar',
       name: 'BookAppointment',
       component: () => import('@/views/public/BookAppointment.vue'),
@@ -179,6 +185,15 @@ router.beforeEach(async (to, from, next) => {
     return
   }
   if (to.name === 'Login' && authStore.isAuthenticated) {
+    next({ name: 'Dashboard' })
+    return
+  }
+  // Se deve alterar senha e não está na página de primeiro login
+  if (authStore.user?.must_change_password && to.name !== 'FirstLogin') {
+    next({ name: 'FirstLogin' })
+    return
+  }
+  if (to.name === 'FirstLogin' && !authStore.user?.must_change_password) {
     next({ name: 'Dashboard' })
     return
   }

@@ -36,7 +36,11 @@ export const useAuthStore = defineStore('auth', {
         localStorage.setItem('token', this.token)
         localStorage.setItem('refreshToken', this.refreshToken)
         
-        router.push({ name: 'Dashboard' })
+        if (data.must_change_password) {
+          router.push({ name: 'FirstLogin' })
+        } else {
+          router.push({ name: 'Dashboard' })
+        }
         return { success: true }
       } catch (error) {
         return { 

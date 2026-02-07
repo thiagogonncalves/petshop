@@ -7,7 +7,7 @@
       <h1 class="text-2xl font-bold text-gray-800">Dados da empresa</h1>
     </div>
 
-    <div class="bg-white rounded-lg shadow border-2 border-orange-200 p-6 max-w-2xl">
+    <div class="bg-white rounded-lg shadow border-2 theme-card p-6 max-w-2xl">
       <p class="text-sm text-gray-600 mb-4">Logo e dados exibidos na tela de login, no PDV e no cupom.</p>
 
       <form @submit.prevent="save">

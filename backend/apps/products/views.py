@@ -40,6 +40,40 @@ class ProductViewSet(viewsets.ModelViewSet):
     filterset_fields = ['category', 'is_active']
     search_fields = ['name', 'barcode', 'sku', 'gtin']
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        q = (self.request.query_params.get('search') or self.request.query_params.get('q') or '').strip()
+        if not q:
+            return queryset
+        from django.db.models import Q
+        from django.db.models.functions import Cast
+        from django.db.models import CharField
+        q_lower = q.lower()
+        base_q = (
+            Q(name__icontains=q) |
+            Q(sku__icontains=q) |
+            Q(barcode__icontains=q) |
+            Q(gtin__icontains=q) |
+            Q(description__icontains=q) |
+            Q(category__name__icontains=q)
+        )
+        if q_lower == 'ativo':
+            return queryset.filter(is_active=True)
+        if q_lower == 'inativo':
+            return queryset.filter(is_active=False)
+        try:
+            from decimal import Decimal
+            _ = Decimal(q.replace(',', '.'))
+            queryset = queryset.annotate(
+                cost_str=Cast('cost_price', CharField()),
+                price_str=Cast('sale_price', CharField()),
+                stock_str=Cast('stock_quantity', CharField()),
+            )
+            base_q = base_q | Q(cost_str__icontains=q.replace(',', '.')) | Q(price_str__icontains=q.replace(',', '.')) | Q(stock_str__icontains=q)
+        except Exception:
+            pass
+        return queryset.filter(base_q)
+
     @action(detail=True, methods=['patch'], url_path='pricing')
     def pricing(self, request, pk=None):
         """PATCH pricing: profit_margin or sale_price + price_manually_set."""

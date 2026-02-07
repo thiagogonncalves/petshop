@@ -144,6 +144,6 @@ class CompanySettingsViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         obj, _ = CompanySettings.objects.get_or_create(
-            defaults={'name': '', 'cpf_cnpj': '', 'address': '', 'address_number': ''}
+            defaults={'name': '', 'cpf_cnpj': '', 'address': '', 'address_number': '', 'theme': 'orange'}
         )
         return CompanySettings.objects.filter(pk=obj.pk)

@@ -1,6 +1,6 @@
 <template>
-  <div class="bg-white rounded-xl shadow-md border-2 border-orange-200 overflow-hidden">
-    <div class="bg-gradient-to-r from-orange-400 to-orange-300 px-4 py-3 sm:px-6 sm:py-4">
+  <div class="bg-white rounded-xl shadow-md border-2 theme-card overflow-hidden">
+    <div class="theme-table-header px-4 py-3 sm:px-6 sm:py-4">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div class="flex items-center">
           <svg class="w-6 h-6 text-white mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

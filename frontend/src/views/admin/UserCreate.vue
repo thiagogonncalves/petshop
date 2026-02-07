@@ -5,7 +5,7 @@
       <h1 class="text-2xl font-bold text-blue-800">Novo Usuário</h1>
     </div>
 
-    <div class="bg-white shadow-lg rounded-lg border-2 border-orange-200 p-6 max-w-2xl">
+    <div class="bg-white shadow-lg rounded-lg border-2 theme-card p-6 max-w-2xl">
       <form @submit.prevent="save">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div class="md:col-span-2">

@@ -10,7 +10,7 @@
     </div>
 
     <!-- Upload XML -->
-    <div class="bg-white shadow-lg rounded-lg border-2 border-orange-200 p-6 mb-6">
+    <div class="bg-white shadow-lg rounded-lg border-2 theme-card p-6 mb-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-3">Enviar arquivo XML da NF-e</h2>
       <form @submit.prevent="uploadXml" class="flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[200px]">
@@ -34,7 +34,7 @@
     </div>
 
     <!-- Importar pela chave de acesso -->
-    <div class="bg-white shadow-lg rounded-lg border-2 border-orange-200 p-6 mb-6">
+    <div class="bg-white shadow-lg rounded-lg border-2 theme-card p-6 mb-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-3">Ou importar pela chave de acesso</h2>
       <p class="text-sm text-gray-600 mb-3">Informe os 44 dígitos da chave de acesso da NF-e para buscar e importar automaticamente (requer configuração no servidor).</p>
       <form @submit.prevent="importByKey" class="flex flex-wrap items-end gap-4">
@@ -59,7 +59,7 @@
     </div>
 
     <!-- Lista de importações -->
-    <div class="bg-white shadow-lg rounded-lg border-2 border-orange-200 overflow-hidden mb-6">
+    <div class="bg-white shadow-lg rounded-lg border-2 theme-card overflow-hidden mb-6">
       <h2 class="text-lg font-semibold text-gray-800 p-4 border-b border-orange-200">Importações recentes</h2>
       <div class="overflow-x-auto">
         <table class="min-w-full divide-y divide-gray-200">

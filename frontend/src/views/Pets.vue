@@ -18,9 +18,9 @@
     </div>
 
     <!-- Tabela de Animais -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 border-orange-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gradient-to-r from-orange-400 to-orange-300">
+        <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Cliente</th>
@@ -37,7 +37,7 @@
                 <img v-if="pet.photo" 
                      :src="pet.photo" 
                      :alt="pet.name"
-                     class="w-10 h-10 rounded-full object-cover mr-3 border-2 border-orange-200">
+                     class="w-10 h-10 rounded-full object-cover mr-3 border-2 theme-card">
                 <span class="text-sm font-medium text-gray-900">{{ pet.name }}</span>
               </div>
             </td>
@@ -144,7 +144,7 @@
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-2">Foto do Animal</label>
             <div v-if="form.photo" class="mb-2">
-              <img :src="form.photo" alt="Foto do pet" class="w-32 h-32 object-cover rounded-lg border-2 border-orange-200">
+              <img :src="form.photo" alt="Foto do pet" class="w-32 h-32 object-cover rounded-lg border-2 theme-card">
             </div>
             <input 
               type="file" 

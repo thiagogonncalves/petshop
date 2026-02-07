@@ -25,17 +25,42 @@
       </div>
     </div>
 
+    <!-- Campo de busca -->
+    <div class="mb-4">
+      <div class="relative max-w-md">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Buscar por nome, código, categoria, custo, preço, estoque ou status..."
+          class="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-colors"
+        />
+        <button
+          v-if="searchQuery"
+          type="button"
+          @click="searchQuery = ''"
+          class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+          aria-label="Limpar busca"
+        >
+          <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
     <!-- Tabela de Produtos -->
-    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 border-orange-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gradient-to-r from-orange-400 to-orange-300">
+        <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-14">Foto</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Código</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Categoria</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Custo</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Margem %</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Preço</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estoque</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
@@ -56,11 +81,10 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.category_name }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.cost_price) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.profit_margin ?? 0 }}%</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.sale_price) }}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm">
               <span :class="product.is_low_stock ? 'text-red-600 font-semibold' : 'text-gray-500'">
-                {{ product.stock_quantity }} {{ product.unit }}
+                {{ product.unit === 'KG' ? (product.stock_quantity / 1000).toFixed(3) : product.stock_quantity }} {{ product.unit === 'KG' ? 'kg' : product.unit }}
               </span>
             </td>
             <td class="px-6 py-4 whitespace-nowrap">
@@ -79,10 +103,10 @@
             </td>
           </tr>
           <tr v-if="loading && products.length === 0">
-            <td colspan="10" class="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td>
+            <td colspan="9" class="px-6 py-8 text-center text-sm text-gray-500">Carregando...</td>
           </tr>
           <tr v-else-if="!loading && products.length === 0">
-            <td colspan="10" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum produto encontrado</td>
+            <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">Nenhum produto encontrado</td>
           </tr>
         </tbody>
       </table>
@@ -182,9 +206,15 @@
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Preço de Venda</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Preço produto fechado (R$)' : 'Preço de Venda' }}</label>
               <input v-model="form.sale_price" type="number" step="0.01" min="0.01" required
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <p v-if="form.unit === 'KG'" class="text-xs text-gray-500 mt-0.5">Valor da unidade inteira</p>
+            </div>
+            <div v-if="form.unit === 'KG'" class="md:col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Preço por kg (R$)</label>
+              <input v-model="form.price_per_kg" type="number" step="0.01" min="0"
+                     class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div class="flex items-end pb-2">
               <label class="flex items-center">
@@ -196,8 +226,8 @@
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Estoque</label>
-              <input v-model="form.stock_quantity" type="number" min="0" required
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Estoque (kg)' : 'Estoque' }}</label>
+              <input v-model="form.stock_quantity" type="number" :step="form.unit === 'KG' ? 0.001 : 1" min="0" required
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
@@ -209,8 +239,11 @@
 
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-            <input v-model="form.unit" type="text" placeholder="Ex: un, kg, litro"
-                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <select v-model="form.unit"
+                    class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <option value="UN">Unidade</option>
+              <option value="KG">Quilograma (kg)</option>
+            </select>
           </div>
 
           <div class="mb-4">
@@ -266,7 +299,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue'
+import { ref, computed, onMounted, nextTick, watch } from 'vue'
 import { productsService } from '@/services/products'
 import { useSubscriptionStore } from '@/stores/subscription'
 import Pagination from '@/components/Pagination.vue'
@@ -283,6 +316,7 @@ const loading = ref(false)
 const currentPage = ref(1)
 const totalCount = ref(0)
 const pageSize = ref(20)
+const searchQuery = ref('')
 
 const totalPages = computed(() => Math.max(1, Math.ceil(totalCount.value / pageSize.value)))
 
@@ -331,10 +365,12 @@ function clearImagePreview() {
 const loadProducts = async () => {
   loading.value = true
   try {
-    const response = await productsService.getAll({
+    const params = {
       page: currentPage.value,
       page_size: pageSize.value,
-    })
+    }
+    if (searchQuery.value.trim()) params.search = searchQuery.value.trim()
+    const response = await productsService.getAll(params)
     const data = response.data
     products.value = data.results ?? data
     if (!Array.isArray(products.value)) products.value = []
@@ -355,6 +391,14 @@ function goToPage(page) {
   }
 }
 
+// Debounce da busca: ao digitar, volta para página 1 e recarrega após 350ms
+let searchDebounce = null
+watch(searchQuery, () => {
+  currentPage.value = 1
+  if (searchDebounce) clearTimeout(searchDebounce)
+  searchDebounce = setTimeout(() => loadProducts(), 350)
+})
+
 const loadCategories = async () => {
   try {
     const response = await productsService.getCategories()
@@ -368,6 +412,7 @@ const openModal = (product = null) => {
   editingProduct.value = product
   clearImagePreview()
   if (product) {
+    const unit = product.unit ?? 'UN'
     form.value = {
       name: product.name ?? '',
       description: product.description ?? '',
@@ -378,9 +423,10 @@ const openModal = (product = null) => {
       profit_margin: product.profit_margin ?? 0,
       sale_price: product.sale_price ?? 0,
       price_manually_set: product.price_manually_set ?? false,
-      stock_quantity: product.stock_quantity ?? 0,
+      price_per_kg: product.price_per_kg ?? null,
+      stock_quantity: unit === 'KG' ? ((product.stock_quantity ?? 0) / 1000) : (product.stock_quantity ?? 0),
       min_stock: product.min_stock ?? 0,
-      unit: product.unit ?? 'UN',
+      unit,
       is_active: product.is_active !== false,
     }
     if (product.image_url) {
@@ -397,6 +443,7 @@ const openModal = (product = null) => {
       profit_margin: 0,
       sale_price: 0,
       price_manually_set: false,
+      price_per_kg: null,
       stock_quantity: 0,
       min_stock: 0,
       unit: 'UN',
@@ -448,6 +495,8 @@ async function saveCategory() {
 
 const saveProduct = async () => {
   try {
+    const unit = (form.value.unit || 'UN').trim() || 'UN'
+    const stockVal = parseFloat(form.value.stock_quantity) || 0
     const payload = {
       name: String(form.value.name).trim(),
       description: String(form.value.description || '').trim(),
@@ -458,9 +507,10 @@ const saveProduct = async () => {
       profit_margin: parseFloat(form.value.profit_margin) || 0,
       sale_price: parseFloat(form.value.sale_price) || 0.01,
       price_manually_set: Boolean(form.value.price_manually_set),
-      stock_quantity: parseInt(form.value.stock_quantity) || 0,
+      price_per_kg: unit === 'KG' ? (parseFloat(form.value.price_per_kg) || null) : null,
+      stock_quantity: unit === 'KG' ? Math.round(stockVal * 1000) : Math.max(0, parseInt(stockVal) || 0),
       min_stock: parseInt(form.value.min_stock) || 0,
-      unit: (form.value.unit || 'UN').trim() || 'UN',
+      unit,
       is_active: form.value.is_active !== false,
     }
     if (imageFile.value) {

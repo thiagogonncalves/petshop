@@ -66,30 +66,30 @@
     <template v-else-if="data">
       <!-- KPIs -->
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <p class="text-sm text-gray-600">Total de vendas</p>
           <p class="text-2xl font-bold text-blue-800">{{ data.total_sales }}</p>
         </div>
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <p class="text-sm text-gray-600">Faturamento</p>
           <p class="text-2xl font-bold text-blue-800">R$ {{ formatPrice(data.total_revenue) }}</p>
         </div>
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <p class="text-sm text-gray-600">Ticket médio</p>
           <p class="text-2xl font-bold text-blue-800">R$ {{ formatPrice(data.ticket_avg) }}</p>
         </div>
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <p class="text-sm text-gray-600">Itens vendidos</p>
           <p class="text-2xl font-bold text-blue-800">{{ data.total_items_sold }}</p>
         </div>
-        <div v-if="data.estimated_profit != null" class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div v-if="data.estimated_profit != null" class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <p class="text-sm text-gray-600">Lucro estimado</p>
           <p class="text-2xl font-bold text-green-700">R$ {{ formatPrice(data.estimated_profit) }}</p>
         </div>
       </div>
 
       <!-- Vendas por dia (barras simples) -->
-      <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+      <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
         <h2 class="text-lg font-semibold text-blue-800 mb-4">Vendas por dia</h2>
         <div v-if="data.sales_by_day && data.sales_by_day.length" class="space-y-2 max-h-64 overflow-y-auto">
           <div
@@ -112,7 +112,7 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Por forma de pagamento -->
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <h2 class="text-lg font-semibold text-blue-800 mb-4">Por forma de pagamento</h2>
           <table class="min-w-full text-sm">
             <thead>
@@ -133,7 +133,7 @@
         </div>
 
         <!-- Top 5 produtos -->
-        <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+        <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
           <h2 class="text-lg font-semibold text-blue-800 mb-4">Top 5 produtos</h2>
           <table class="min-w-full text-sm">
             <thead>
@@ -155,7 +155,7 @@
       </div>
 
       <!-- Top 5 clientes -->
-      <div class="bg-white rounded-lg border-2 border-orange-200 p-4 shadow">
+      <div class="bg-white rounded-lg border-2 theme-card p-4 shadow">
         <h2 class="text-lg font-semibold text-blue-800 mb-4">Top 5 clientes</h2>
         <table class="min-w-full text-sm">
           <thead>

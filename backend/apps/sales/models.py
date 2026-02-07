@@ -153,10 +153,16 @@ class SaleItem(models.Model):
         related_name='sale_items',
         verbose_name='Agendamento'
     )
-    quantity = models.IntegerField(
+    quantity = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
         default=1,
-        validators=[MinValueValidator(1)],
+        validators=[MinValueValidator(Decimal('0.0001'))],
         verbose_name='Quantidade'
+    )
+    sold_by_kg = models.BooleanField(
+        default=False,
+        verbose_name='Vendido por kg'
     )
     unit_price = models.DecimalField(
         max_digits=10,
@@ -204,7 +210,9 @@ class SaleItem(models.Model):
 
     def calculate_total(self):
         """Calculate item total"""
-        self.total = (self.unit_price * self.quantity) - self.discount
+        from decimal import Decimal
+        qty = Decimal(str(self.quantity))
+        self.total = (self.unit_price * qty) - self.discount
         return self.total
 
     def save(self, *args, **kwargs):

@@ -51,11 +51,14 @@ Edite e preencha:
 docker compose up -d --build
 ```
 
-### 4. Criar superusuário (primeira vez)
+### 4. Primeiro acesso
 
-```bash
-docker compose exec backend python manage.py createsuperuser
-```
+Na primeira criação do banco, é criado automaticamente o usuário admin com senha admin:
+
+- **Usuário:** admin
+- **Senha:** admin
+
+Faça login e **altere usuário e senha** na tela de primeiro acesso.
 
 ### 5. (Opcional) Dados iniciais
 
