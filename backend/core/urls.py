@@ -37,6 +37,8 @@ urlpatterns = [
     path('api/subscription/', include('apps.subscription.urls')),
 ]
 
+# Media (uploads): sempre servir - nginx em produção faz proxy de /media/ para o backend
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
