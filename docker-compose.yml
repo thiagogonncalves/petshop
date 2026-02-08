@@ -13,7 +13,9 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks: [internal]
+    networks:
+      - internal
+      - proxy
 
   backend:
     build:
@@ -41,7 +43,9 @@ services:
         condition: service_healthy
     volumes:
       - ./media:/app/media
-    networks: [internal]
+    networks:
+      - internal
+      - proxy
 
   frontend:
     build:
@@ -50,11 +54,11 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-    ports:
-      - "0.0.0.0:8082:80"
     volumes:
       - ./media:/usr/share/nginx/html/media:ro
-    networks: [internal]
+    networks:
+      - internal
+      - proxy
 
 volumes:
   postgres_data:
@@ -63,3 +67,5 @@ volumes:
 networks:
   internal:
     driver: bridge
+  proxy:
+    external: true    
