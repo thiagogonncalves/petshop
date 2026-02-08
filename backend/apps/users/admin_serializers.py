@@ -157,9 +157,27 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'cpf_cnpj', 'address', 'address_number', 'logo', 'logo_url', 'theme']
         read_only_fields = ['id', 'logo_url']
 
+    def update(self, instance, validated_data):
+        import os
+        from django.conf import settings
+        # Limpar referência órfã (arquivo não existe) antes de salvar novo - evita erro ao substituir
+        if instance.logo and 'logo' in validated_data:
+            path = os.path.join(settings.MEDIA_ROOT, str(instance.logo))
+            if not os.path.isfile(path):
+                instance.logo = None  # evita que Django tente deletar arquivo inexistente
+        # Garantir que o diretório media/company existe antes do save (importante em Docker/volume novo)
+        if 'logo' in validated_data:
+            os.makedirs(os.path.join(settings.MEDIA_ROOT, 'company'), exist_ok=True)
+        return super().update(instance, validated_data)
+
     def get_logo_url(self, obj):
-        if obj.logo:
-            url = obj.logo.url
-            # URL relativa à raiz: funciona em produção (proxy) independente de scheme/host
-            return url if url.startswith('/') else f'/{url}'
-        return None
+        if not obj.logo:
+            return None
+        # Se o arquivo não existir em disco (referência órfã), não retornar URL
+        from django.conf import settings
+        import os
+        path = os.path.join(settings.MEDIA_ROOT, str(obj.logo))
+        if not os.path.isfile(path):
+            return None
+        url = obj.logo.url
+        return url if url.startswith('/') else f'/{url}'

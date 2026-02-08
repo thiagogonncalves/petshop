@@ -20,4 +20,9 @@ export const adminCompanyService = {
   update(id, payload) {
     return api.patch(`/admin/company-settings/${id}/`, payload)
   },
+
+  /** Upload de logo (usa endpoint dedicado que salva o arquivo corretamente) */
+  uploadLogo(id, formData) {
+    return api.post(`/admin/company-settings/${id}/logo/`, formData)
+  },
 }

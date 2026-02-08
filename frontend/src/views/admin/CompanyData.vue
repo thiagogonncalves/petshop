@@ -137,12 +137,12 @@ async function save() {
   try {
     if (imageFile.value) {
       const fd = new FormData()
+      fd.append('logo', imageFile.value)
       fd.append('name', form.value.name)
       fd.append('cpf_cnpj', form.value.cpf_cnpj)
       fd.append('address', form.value.address)
       fd.append('address_number', form.value.address_number)
-      fd.append('logo', imageFile.value)
-      await adminCompanyService.update(companyId.value, fd)
+      await adminCompanyService.uploadLogo(companyId.value, fd)
     } else {
       await adminCompanyService.update(companyId.value, {
         name: form.value.name,

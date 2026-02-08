@@ -106,4 +106,4 @@ cat backup_20250101.sql | docker compose exec -T db psql -U postgres petshop_db
 ## Volumes
 
 - `postgres_data`: dados do banco
-- `media_data`: uploads (logos, fotos de pets, etc.)
+- `./media`: uploads (logos, fotos de pets) — bind mount na raiz do projeto

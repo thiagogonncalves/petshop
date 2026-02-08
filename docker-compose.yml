@@ -40,7 +40,7 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - media_data:/app/media
+      - ./media:/app/media
     networks: [internal]
 
   frontend:
@@ -52,11 +52,12 @@ services:
       - backend
     ports:
       - "0.0.0.0:8082:80"
+    volumes:
+      - ./media:/usr/share/nginx/html/media:ro
     networks: [internal]
 
 volumes:
   postgres_data:
-  media_data:
 
 
 networks:

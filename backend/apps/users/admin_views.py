@@ -3,6 +3,7 @@ Admin-only views: user management and roles (admin area).
 """
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from django.contrib.auth.password_validation import validate_password
@@ -139,7 +140,8 @@ class CompanySettingsViewSet(viewsets.ModelViewSet):
     """
     permission_classes = [IsAdmin]
     serializer_class = CompanySettingsSerializer
-    http_method_names = ['get', 'head', 'options', 'patch']
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    http_method_names = ['get', 'head', 'options', 'patch', 'post']
     pagination_class = None
 
     def get_queryset(self):
@@ -147,3 +149,45 @@ class CompanySettingsViewSet(viewsets.ModelViewSet):
             defaults={'name': '', 'cpf_cnpj': '', 'address': '', 'address_number': '', 'theme': 'orange'}
         )
         return CompanySettings.objects.filter(pk=obj.pk)
+
+    @action(detail=True, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def logo(self, request, pk=None):
+        """Upload de logo + dados: POST multipart com logo (arquivo) e demais campos."""
+        import os
+        import re
+        import uuid
+        from django.conf import settings
+        obj = self.get_object()
+        file_obj = request.FILES.get('logo')
+        if not file_obj:
+            return Response({'detail': 'Campo logo obrigatório.'}, status=status.HTTP_400_BAD_REQUEST)
+        # Garantir caminho absoluto (crítico para Docker/volume)
+        media_root = os.path.abspath(str(settings.MEDIA_ROOT))
+        dir_path = os.path.join(media_root, 'company')
+        os.makedirs(dir_path, exist_ok=True)
+        # Nome seguro para URL (sem espaços, &, acentos - evita 404 ao carregar a imagem)
+        base = re.sub(r'[^\w\-]', '_', os.path.splitext(file_obj.name)[0])[:50] or 'logo'
+        ext = os.path.splitext(file_obj.name)[1].lower() or '.png'
+        if ext not in ('.png', '.jpg', '.jpeg', '.gif', '.webp'):
+            ext = '.png'
+        filename = f'{base}_{uuid.uuid4().hex[:8]}{ext}'
+        rel_path = f'company/{filename}'
+        full_path = os.path.join(dir_path, filename)
+        # Gravação direta em disco (evita problemas do FileSystemStorage no Docker)
+        with open(full_path, 'wb') as f:
+            for chunk in file_obj.chunks():
+                f.write(chunk)
+        if obj.logo:
+            try:
+                old_path = os.path.join(media_root, str(obj.logo))
+                if os.path.isfile(old_path):
+                    os.remove(old_path)
+            except Exception:
+                pass
+        obj.logo = rel_path
+        for field in ('name', 'cpf_cnpj', 'address', 'address_number'):
+            if field in request.data:
+                setattr(obj, field, request.data.get(field) or '')
+        obj.save()
+        serializer = CompanySettingsSerializer(obj)
+        return Response(serializer.data)

@@ -2,10 +2,14 @@
 Django production settings for petshop.
 Use: DJANGO_SETTINGS_MODULE=core.settings.production
 """
+import os
 from .base import *
 from decouple import config
 
 DEBUG = False
+
+# Garantir MEDIA_ROOT absoluto para Docker/volume
+MEDIA_ROOT = os.path.abspath(str(BASE_DIR / 'media'))
 
 # Security
 SECURE_BROWSER_XSS_FILTER = True
@@ -41,6 +45,9 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STORAGES = {
     'default': {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        'OPTIONS': {
+            'location': str(BASE_DIR / 'media'),
+        },
     },
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
