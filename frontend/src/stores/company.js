@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { companyService } from '@/services/company'
+import { mediaUrl } from '@/utils/mediaUrl'
 
 export const useCompanyStore = defineStore('company', {
   state: () => ({
@@ -7,7 +8,7 @@ export const useCompanyStore = defineStore('company', {
   }),
 
   getters: {
-    logoUrl: (state) => state.company?.logo_url || null,
+    logoUrl: (state) => mediaUrl(state.company?.logo_url) || null,
     companyName: (state) => state.company?.name || 'GB PET',
     theme: (state) => state.company?.theme || 'orange',
   },

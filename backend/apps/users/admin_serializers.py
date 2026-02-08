@@ -159,8 +159,7 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
 
     def get_logo_url(self, obj):
         if obj.logo:
-            request = self.context.get('request')
-            if request:
-                return request.build_absolute_uri(obj.logo.url)
-            return obj.logo.url
+            url = obj.logo.url
+            # URL relativa à raiz: funciona em produção (proxy) independente de scheme/host
+            return url if url.startswith('/') else f'/{url}'
         return None

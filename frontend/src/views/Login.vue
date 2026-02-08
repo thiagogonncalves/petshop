@@ -21,7 +21,7 @@
         <!-- Logo e Título (dados da empresa) -->
         <div class="text-center mb-4">
           <div class="flex items-center justify-center mb-2">
-            <img v-if="company.logo_url" :src="company.logo_url" :alt="company.name || 'Logo'" class="w-28 h-28 object-contain" />
+            <img v-if="company.logo_url" :src="mediaUrl(company.logo_url)" :alt="company.name || 'Logo'" class="w-28 h-28 object-contain" />
             <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="w-28 h-28 object-contain" />
           </div>
           <p v-if="company.name" class="text-gray-800 font-semibold text-base">{{ company.name }}</p>
@@ -88,6 +88,7 @@
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { companyService } from '@/services/company'
+import { mediaUrl } from '@/utils/mediaUrl'
 
 const authStore = useAuthStore()
 const company = ref({})

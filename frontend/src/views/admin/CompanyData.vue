@@ -74,6 +74,7 @@
 import { ref, onMounted } from 'vue'
 import { adminCompanyService } from '@/services/company'
 import { useCompanyStore } from '@/stores/company'
+import { mediaUrl } from '@/utils/mediaUrl'
 
 const form = ref({
   name: '',
@@ -116,8 +117,9 @@ async function load() {
         address_number: data.address_number ?? '',
       }
       if (data.logo_url) {
-        loadedLogoUrl.value = data.logo_url
-        imagePreviewUrl.value = data.logo_url
+        const url = mediaUrl(data.logo_url)
+        loadedLogoUrl.value = url
+        imagePreviewUrl.value = url
       } else {
         loadedLogoUrl.value = null
       }

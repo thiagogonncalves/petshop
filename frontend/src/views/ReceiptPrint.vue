@@ -5,7 +5,7 @@
     <div v-else ref="receiptRef" class="receipt-paper">
       <div class="receipt-header">
         <img
-          :src="company.logo_url || defaultLogo"
+          :src="mediaUrl(company.logo_url) || defaultLogo"
           :alt="company.name || 'Logo'"
           class="receipt-logo"
         />
@@ -49,6 +49,7 @@ import { useRoute } from 'vue-router'
 import defaultLogo from '@/assets/logosemfundo.png'
 import { salesService } from '@/services/sales'
 import { companyService } from '@/services/company'
+import { mediaUrl } from '@/utils/mediaUrl'
 
 const route = useRoute()
 const company = ref({})
