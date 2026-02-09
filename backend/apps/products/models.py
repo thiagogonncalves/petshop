@@ -140,8 +140,30 @@ class Product(models.Model):
         if self.sale_price < Decimal('0.01'):
             self.sale_price = Decimal('0.01')
 
+    def recalculate_margin_from_price(self):
+        """Quando preço é manual: calcula margem a partir de custo e preço de venda."""
+        if not self.price_manually_set or not self.cost_price or self.cost_price <= 0:
+            return
+        # margem % = ((preço_venda - custo) / custo) * 100
+        self.profit_margin = ((self.sale_price - self.cost_price) / self.cost_price * Decimal('100')).quantize(
+            Decimal('0.01'), rounding=ROUND_HALF_UP
+        )
+        if self.profit_margin < Decimal('0'):
+            self.profit_margin = Decimal('0')
+
     def save(self, *args, **kwargs):
-        self.recalculate_sale_price()
+        if self.price_manually_set:
+            self.recalculate_margin_from_price()
+        else:
+            self.recalculate_sale_price()
+
+        # Código (SKU) sequencial automático quando não informado na criação
+        if not self.pk and (not self.sku or not str(self.sku).strip()):
+            super().save(*args, **kwargs)
+            self.sku = f'P{self.id:06d}'
+            super().save(update_fields=['sku'])
+            return
+
         super().save(*args, **kwargs)
 
 

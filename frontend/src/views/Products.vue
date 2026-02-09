@@ -183,8 +183,10 @@
 
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Código</label>
-              <input v-model="form.sku" type="text" placeholder="Código do produto"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <input v-model="form.sku" type="text" readonly
+                     :placeholder="editingProduct ? '' : 'Será atribuído automaticamente'"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-not-allowed focus:outline-none">
+              <p class="text-xs text-gray-500 mt-0.5">{{ editingProduct ? 'Código atribuído pelo sistema' : 'Atribuído automaticamente em sequência ao salvar' }}</p>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Código de Barras</label>
@@ -195,32 +197,45 @@
 
           <div class="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Preço de Custo</label>
-              <input v-model="form.cost_price" type="number" step="0.01" min="0" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-1">Preço de Custo (R$)</label>
+              <input v-model.number="form.cost_price" type="number" step="0.01" min="0" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                     @input="onCostOrPricingChange">
+            </div>
+            <div class="col-span-2">
+              <label class="block text-sm font-medium text-gray-700 mb-2">Como definir o preço de venda?</label>
+              <div class="flex flex-wrap gap-4">
+                <label class="flex items-center">
+                  <input v-model="pricingMode" type="radio" value="margin" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                  <span class="ml-2 text-sm text-gray-700">Calcular preço pela margem (%)</span>
+                </label>
+                <label class="flex items-center">
+                  <input v-model="pricingMode" type="radio" value="price" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                  <span class="ml-2 text-sm text-gray-700">Inserir preço manualmente (calcula margem)</span>
+                </label>
+              </div>
             </div>
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Margem de Lucro (%)</label>
-              <input v-model="form.profit_margin" type="number" step="0.5" min="0"
-                     :disabled="form.price_manually_set"
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100">
+              <input v-model.number="form.profit_margin" type="number" step="0.5" min="0"
+                     :readonly="pricingMode === 'price'"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                     :class="pricingMode === 'price' ? 'bg-gray-50 cursor-not-allowed' : ''"
+                     @input="onMarginChange">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Preço produto fechado (R$)' : 'Preço de Venda' }}</label>
-              <input v-model="form.sale_price" type="number" step="0.01" min="0.01" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Preço produto fechado (R$)' : 'Preço de Venda (R$)' }}</label>
+              <input v-model.number="form.sale_price" type="number" step="0.01" min="0.01" required
+                     :readonly="pricingMode === 'margin'"
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                     :class="pricingMode === 'margin' ? 'bg-gray-50 cursor-not-allowed' : ''"
+                     @input="onPriceChange">
               <p v-if="form.unit === 'KG'" class="text-xs text-gray-500 mt-0.5">Valor da unidade inteira</p>
             </div>
             <div v-if="form.unit === 'KG'" class="md:col-span-2">
               <label class="block text-sm font-medium text-gray-700 mb-1">Preço por kg (R$)</label>
               <input v-model="form.price_per_kg" type="number" step="0.01" min="0"
                      class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            <div class="flex items-end pb-2">
-              <label class="flex items-center">
-                <input v-model="form.price_manually_set" type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <span class="ml-2 text-sm text-gray-700">Preço definido manualmente (não recalcular pela margem)</span>
-              </label>
             </div>
           </div>
 
@@ -340,6 +355,35 @@ const form = ref({
   is_active: true,
 })
 
+// Modo de preço: 'margin' = calcular preço pela margem | 'price' = inserir preço manual
+const pricingMode = ref('margin')
+
+function onMarginChange() {
+  const cost = Number(form.value.cost_price) || 0
+  const margin = Number(form.value.profit_margin) || 0
+  if (cost > 0) {
+    form.value.sale_price = Math.round((cost * (1 + margin / 100)) * 100) / 100
+    if (form.value.sale_price < 0.01) form.value.sale_price = 0.01
+  }
+}
+
+function onPriceChange() {
+  const cost = Number(form.value.cost_price) || 0
+  const price = Number(form.value.sale_price) || 0
+  if (cost > 0) {
+    form.value.profit_margin = Math.round(((price - cost) / cost * 100) * 100) / 100
+    if (form.value.profit_margin < 0) form.value.profit_margin = 0
+  }
+}
+
+function onCostOrPricingChange() {
+  if (pricingMode.value === 'margin') {
+    onMarginChange()
+  } else {
+    onPriceChange()
+  }
+}
+
 function onImageSelect(e) {
   const file = e.target.files?.[0]
   imageFile.value = file || null
@@ -399,6 +443,10 @@ watch(searchQuery, () => {
   searchDebounce = setTimeout(() => loadProducts(), 350)
 })
 
+watch(pricingMode, () => {
+  onCostOrPricingChange()
+})
+
 const loadCategories = async () => {
   try {
     const response = await productsService.getCategories()
@@ -413,6 +461,7 @@ const openModal = (product = null) => {
   clearImagePreview()
   if (product) {
     const unit = product.unit ?? 'UN'
+    const priceManually = product.price_manually_set ?? false
     form.value = {
       name: product.name ?? '',
       description: product.description ?? '',
@@ -422,13 +471,14 @@ const openModal = (product = null) => {
       cost_price: product.cost_price ?? 0,
       profit_margin: product.profit_margin ?? 0,
       sale_price: product.sale_price ?? 0,
-      price_manually_set: product.price_manually_set ?? false,
+      price_manually_set: priceManually,
       price_per_kg: product.price_per_kg ?? null,
       stock_quantity: unit === 'KG' ? ((product.stock_quantity ?? 0) / 1000) : (product.stock_quantity ?? 0),
       min_stock: product.min_stock ?? 0,
       unit,
       is_active: product.is_active !== false,
     }
+    pricingMode.value = priceManually ? 'price' : 'margin'
     if (product.image_url) {
       imagePreviewUrl.value = product.image_url
     }
@@ -449,6 +499,7 @@ const openModal = (product = null) => {
       unit: 'UN',
       is_active: true,
     }
+    pricingMode.value = 'margin'
   }
   showModal.value = true
   nextTick(() => {
@@ -506,7 +557,7 @@ const saveProduct = async () => {
       cost_price: parseFloat(form.value.cost_price) || 0,
       profit_margin: parseFloat(form.value.profit_margin) || 0,
       sale_price: parseFloat(form.value.sale_price) || 0.01,
-      price_manually_set: Boolean(form.value.price_manually_set),
+      price_manually_set: pricingMode.value === 'price',
       price_per_kg: unit === 'KG' ? (parseFloat(form.value.price_per_kg) || null) : null,
       stock_quantity: unit === 'KG' ? Math.round(stockVal * 1000) : Math.max(0, parseInt(stockVal) || 0),
       min_stock: parseInt(form.value.min_stock) || 0,
