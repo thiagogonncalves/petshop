@@ -1,16 +1,16 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
       <div class="flex items-center">
-        <svg class="w-7 h-7 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
+        <svg class="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
         </svg>
-        <h1 class="text-2xl font-bold text-blue-800">Agendamentos</h1>
+        <h1 class="text-xl sm:text-2xl font-bold text-blue-800">Agendamentos</h1>
       </div>
       <button
         type="button"
         :disabled="!subscriptionStore.canWrite"
-        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation min-h-[44px] w-full sm:w-auto"
         @click="openModal()"
       >
         Novo Agendamento
@@ -18,8 +18,9 @@
     </div>
 
     <!-- Tabela de Agendamentos -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
-      <table class="min-w-full divide-y divide-gray-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card -mx-3 sm:mx-0">
+      <div class="overflow-x-auto">
+      <table class="min-w-[680px] divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Data/Hora</th>
@@ -53,11 +54,12 @@
           </tr>
         </tbody>
       </table>
+      </div>
     </div>
 
     <!-- Modal de Agendamento -->
-    <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeModal">
-      <div class="relative top-10 mx-auto p-6 border-2 border-orange-300 w-full max-w-2xl shadow-2xl rounded-xl bg-white">
+    <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4 sm:p-0" @click.self="closeModal">
+      <div class="relative top-4 sm:top-10 mx-auto p-4 sm:p-6 border-2 border-orange-300 w-full max-w-2xl shadow-2xl rounded-xl bg-white max-h-[90vh] overflow-y-auto">
         <div class="flex items-center mb-4">
           <svg class="w-6 h-6 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>

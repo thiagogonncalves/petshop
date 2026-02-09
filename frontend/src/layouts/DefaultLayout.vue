@@ -5,16 +5,28 @@
   >
     <!-- Navigation (fixa como o rodapé) -->
     <nav class="fixed top-0 left-0 right-0 z-30 theme-nav shadow-lg no-print-nav">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-          <div class="flex">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-14 sm:h-16">
+          <div class="flex items-center gap-2">
+            <!-- Hamburger (mobile) -->
+            <button
+              type="button"
+              class="sm:hidden p-2 -ml-2 rounded-lg text-white hover:bg-white/20 touch-manipulation"
+              aria-label="Abrir menu"
+              @click="mobileMenuOpen = !mobileMenuOpen"
+            >
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path v-if="!mobileMenuOpen" fill-rule="evenodd" d="M3 5a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                <path v-else fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+              </svg>
+            </button>
             <div class="flex-shrink-0 flex items-center">
-              <router-link to="/" class="flex items-center">
-                <img v-if="companyStore.logoUrl" :src="companyStore.logoUrl" :alt="companyStore.companyName" class="h-16 w-auto max-w-[200px] object-contain" />
-                <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="h-16 w-auto" />
+              <router-link to="/" class="flex items-center" @click="mobileMenuOpen = false">
+                <img v-if="companyStore.logoUrl" :src="companyStore.logoUrl" :alt="companyStore.companyName" class="h-10 sm:h-14 w-auto max-w-[140px] sm:max-w-[200px] object-contain" />
+                <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="h-10 sm:h-14 w-auto" />
               </router-link>
             </div>
-            <div class="hidden sm:ml-8 sm:flex sm:items-center sm:space-x-1">
+            <div class="hidden sm:ml-4 sm:flex sm:items-center sm:space-x-1">
               <template v-for="item in menuItems" :key="item.name">
                 <!-- Item simples (link) -->
                 <router-link
@@ -58,40 +70,82 @@
               </template>
             </div>
           </div>
-          <div class="flex items-center space-x-4">
-            <span class="text-sm text-white font-medium">{{ userDisplayName }}</span>
+          <div class="flex items-center gap-1 sm:gap-4">
+            <span class="hidden sm:inline text-sm text-white font-medium truncate max-w-[100px] lg:max-w-none">{{ userDisplayName }}</span>
             <button
               @click="logout"
-              class="text-sm text-white theme-nav-btn px-3 py-1 rounded-lg"
+              class="text-sm text-white theme-nav-btn px-3 py-2 rounded-lg touch-manipulation min-h-[44px] sm:min-h-0"
             >
               Sair
             </button>
           </div>
         </div>
       </div>
+
+      <!-- Menu mobile (drawer) -->
+      <Transition name="slide">
+        <div
+          v-show="mobileMenuOpen"
+          class="sm:hidden absolute top-full left-0 right-0 bg-white/95 backdrop-blur shadow-xl border-b-2 theme-card max-h-[calc(100vh-3.5rem)] overflow-y-auto"
+        >
+          <div class="py-2">
+            <template v-for="item in menuItems" :key="item.name">
+              <router-link
+                v-if="item.type !== 'dropdown'"
+                :to="item.path"
+                class="block px-4 py-3 text-gray-800 font-medium hover:bg-orange-50 border-l-4 border-transparent theme-dropdown-link"
+                :class="{ 'theme-dropdown-link active border-l-orange-500 bg-orange-50': route.path === item.path }"
+                @click="mobileMenuOpen = false"
+              >
+                {{ item.name }}
+              </router-link>
+              <div v-else>
+                <div class="px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{{ item.name }}</div>
+                <router-link
+                  v-for="child in item.children"
+                  :key="child.name"
+                  :to="{ path: child.path, query: child.query || {} }"
+                  class="block px-6 py-2.5 text-sm text-gray-700 hover:bg-orange-50"
+                  :class="{ 'font-medium theme-accent-text bg-orange-50': route.path.startsWith(child.path) }"
+                  @click="mobileMenuOpen = false"
+                >
+                  {{ child.name }}
+                </router-link>
+              </div>
+            </template>
+          </div>
+        </div>
+      </Transition>
     </nav>
 
+    <!-- Overlay quando menu mobile aberto -->
+    <div
+      v-show="mobileMenuOpen"
+      class="sm:hidden fixed inset-0 bg-black/40 z-[25] top-14 touch-manipulation"
+      aria-hidden="true"
+      @click="mobileMenuOpen = false"
+    />
+
     <!-- Main content (padding-top para nav fixa, padding-bottom para rodapé fixo) -->
-    <main class="max-w-7xl mx-auto pt-20 py-6 sm:px-6 lg:px-8 flex-1 w-full no-print-main pb-20">
+    <main class="max-w-7xl mx-auto pt-20 sm:pt-24 py-4 sm:py-6 px-3 sm:px-6 lg:px-8 flex-1 w-full no-print-main pb-24 sm:pb-20">
       <RouterView />
     </main>
 
-    <!-- Footer fixo no final da tela: tudo na mesma linha -->
-    <footer class="fixed bottom-0 left-0 right-0 z-30 theme-footer no-print-footer">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 sm:py-3">
-        <div class="flex flex-row items-center justify-center gap-3 sm:gap-6 flex-wrap text-white text-sm sm:text-base">
-          <router-link to="/" class="flex items-center flex-shrink-0">
-            <img v-if="companyStore.logoUrl" :src="companyStore.logoUrl" :alt="companyStore.companyName" class="h-8 sm:h-10 w-auto max-w-[120px] object-contain" />
-            <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="h-8 sm:h-10 w-auto" />
+    <!-- Footer fixo no final da tela -->
+    <footer class="fixed bottom-0 left-0 right-0 z-30 theme-footer no-print-footer safe-area-bottom">
+      <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-3">
+        <div class="flex flex-row items-center justify-center gap-2 sm:gap-6 flex-wrap text-white text-xs sm:text-sm">
+          <router-link to="/" class="flex items-center flex-shrink-0 hidden sm:flex">
+            <img v-if="companyStore.logoUrl" :src="companyStore.logoUrl" :alt="companyStore.companyName" class="h-6 sm:h-10 w-auto max-w-[80px] sm:max-w-[120px] object-contain" />
+            <img v-else src="@/assets/logosemfundo.png" alt="GB PET" class="h-6 sm:h-10 w-auto" />
           </router-link>
-          <span class="hidden sm:inline text-white/70">|</span>
           <span class="font-semibold whitespace-nowrap">{{ currentDateStr }}</span>
-          <span class="text-white/70">|</span>
+          <span class="text-white/70 hidden sm:inline">|</span>
           <span class="font-mono whitespace-nowrap">{{ currentTime }}</span>
-          <span class="hidden sm:inline text-white/70">|</span>
-          <span class="whitespace-nowrap">Desenvolvido por <strong>2Cliques Soluções Digitais</strong></span>
+          <span class="text-white/70 hidden md:inline">|</span>
+          <span class="whitespace-nowrap hidden md:inline">2Cliques Soluções Digitais</span>
           <span class="text-white/70">|</span>
-          <span class="whitespace-nowrap">Versão {{ version }}</span>
+          <span class="whitespace-nowrap">v{{ version }}</span>
         </div>
       </div>
     </footer>
@@ -112,6 +166,8 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const companyStore = useCompanyStore()
+const mobileMenuOpen = ref(false)
+const isMobile = ref(typeof window !== 'undefined' && window.innerWidth < 640)
 const isReceiptPage = computed(() => route.name === 'ReceiptPrint')
 const version = packageJson.version
 
@@ -131,16 +187,22 @@ function onKeydown(e) {
     router.push({ path: '/pdv' })
   }
 }
+function updateMobile() {
+  isMobile.value = window.innerWidth < 640
+}
 onMounted(() => {
   updateClock()
+  updateMobile()
   clockTimer = setInterval(updateClock, 1000)
   window.addEventListener('keydown', onKeydown)
+  window.addEventListener('resize', updateMobile)
   companyStore.fetchCompany()
   subscriptionStore.fetchStatus().catch(() => {})
 })
 onUnmounted(() => {
   if (clockTimer) clearInterval(clockTimer)
   window.removeEventListener('keydown', onKeydown)
+  window.removeEventListener('resize', updateMobile)
 })
 
 const user = computed(() => authStore.user)
@@ -175,7 +237,7 @@ const menuItems = computed(() => {
       ],
     },
     { name: 'Agendamentos', path: '/scheduling' },
-    { name: 'PDV', path: '/pdv' },
+    { name: 'PDV', path: '/pdv', hideOnMobile: true },
     { name: 'Crediário', path: '/credits' },
   ]
   
@@ -209,7 +271,7 @@ const menuItems = computed(() => {
     })
   }
   
-  return items
+  return items.filter(item => !(isMobile.value && item.hideOnMobile))
 })
 
 const logout = () => {
@@ -217,8 +279,18 @@ const logout = () => {
 }
 </script>
 
+<style scoped>
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateY(-10px);
+  opacity: 0;
+}
+</style>
 <style>
-/* Na impressão da página do cupom: esconde menu e rodapé, imprime só o cupom */
 @media print {
   .receipt-print-page .no-print-nav,
   .receipt-print-page .no-print-footer {

@@ -1,23 +1,23 @@
 <template>
   <div>
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4 sm:mb-6">
       <div class="flex items-center">
-        <svg class="w-7 h-7 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
+        <svg class="w-6 h-6 sm:w-7 sm:h-7 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
           <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
         </svg>
-        <h1 class="text-2xl font-bold text-blue-800">Produtos</h1>
+        <h1 class="text-xl sm:text-2xl font-bold text-blue-800">Produtos</h1>
       </div>
-      <div class="flex gap-3">
+      <div class="flex gap-2 sm:gap-3 flex-wrap">
         <router-link
           to="/nfe"
-          :class="['px-4 py-2 rounded-lg shadow-md inline-flex items-center', subscriptionStore.canWrite ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-gray-200 pointer-events-none']"
+          :class="['px-3 sm:px-4 py-2.5 rounded-lg shadow-md inline-flex items-center text-sm touch-manipulation min-h-[44px]', subscriptionStore.canWrite ? 'bg-orange-500 text-white hover:bg-orange-600' : 'bg-gray-400 text-gray-200 pointer-events-none']"
         >
           Importar NF-e
         </router-link>
         <button
           type="button"
           :disabled="!subscriptionStore.canWrite"
-          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-3 sm:px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 shadow-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm touch-manipulation min-h-[44px]"
           @click="openModal()"
         >
           Novo Produto
@@ -27,7 +27,7 @@
 
     <!-- Campo de busca -->
     <div class="mb-4">
-      <div class="relative max-w-md">
+      <div class="relative w-full sm:max-w-md">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
@@ -51,9 +51,9 @@
       </div>
     </div>
 
-    <!-- Tabela de Produtos -->
-    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card">
-      <table class="min-w-full divide-y divide-gray-200">
+    <!-- Tabela de Produtos (scroll horizontal em mobile) -->
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card -mx-3 sm:mx-0">
+      <table class="min-w-[640px] sm:min-w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-14">Foto</th>
@@ -123,8 +123,8 @@
     />
 
     <!-- Modal de Produto -->
-    <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" @click.self="closeModal">
-      <div class="relative top-10 mx-auto p-6 border-2 border-orange-300 w-full max-w-2xl shadow-2xl rounded-xl bg-white">
+    <div v-if="showModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 p-4 sm:p-0" @click.self="closeModal">
+      <div class="relative top-4 sm:top-10 mx-auto p-4 sm:p-6 border-2 border-orange-300 w-full max-w-2xl shadow-2xl rounded-xl bg-white max-h-[90vh] overflow-y-auto">
         <div class="flex items-center mb-4">
           <svg class="w-6 h-6 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>

@@ -1,18 +1,18 @@
 <template>
   <div class="pdv-page min-h-screen flex flex-col bg-[#e8e8e8] fixed inset-0 w-full h-full z-40 overflow-auto">
     <!-- Barra do nome do produto (destaque) -->
-    <div class="bg-[#1e3a5f] text-white px-6 py-5 text-center min-h-[72px] flex items-center justify-center">
-      <span class="text-2xl font-semibold uppercase">{{ currentProduct ? currentProduct.name : 'Digite o código ou nome do produto' }}</span>
+    <div class="bg-[#1e3a5f] text-white px-3 sm:px-6 py-4 sm:py-5 text-center min-h-[60px] sm:min-h-[72px] flex items-center justify-center">
+      <span class="text-lg sm:text-2xl font-semibold uppercase line-clamp-2">{{ currentProduct ? currentProduct.name : 'Digite o código ou nome do produto' }}</span>
     </div>
 
     <!-- Área central: painel esquerdo + cupom -->
-    <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 p-4 min-h-0">
+    <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4 p-3 sm:p-4 min-h-0 overflow-auto">
       <!-- Coluna esquerda: foto + entrada do produto -->
       <div class="lg:col-span-1 flex flex-col gap-3">
         <div class="bg-white rounded-xl shadow-md border border-gray-200 p-4 flex flex-col gap-4">
           <!-- Foto do produto (acima do bloco do código) -->
           <div class="w-full flex justify-center">
-            <div class="w-[224px] h-[224px] rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0">
+            <div class="w-full max-w-[200px] sm:max-w-[224px] aspect-square rounded-lg bg-gray-100 border-2 border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 mx-auto">
               <template v-if="currentProduct?.image_url">
                 <img :src="currentProduct.image_url" :alt="currentProduct.name" class="w-full h-full object-cover" />
               </template>
@@ -98,7 +98,7 @@
             <button
               type="button"
               :disabled="!currentProduct || !subscriptionStore.canWrite"
-              class="w-full py-2 bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#2a4a7a] disabled:opacity-50 disabled:cursor-not-allowed"
+              class="w-full py-3 sm:py-2 min-h-[44px] bg-[#1e3a5f] text-white rounded-lg text-sm font-medium hover:bg-[#2a4a7a] disabled:opacity-50 disabled:cursor-not-allowed touch-manipulation"
               @click="addCurrentToCart"
             >
               Adicionar
@@ -134,8 +134,9 @@
               <span v-for="i in 20" :key="i" class="w-2 border border-gray-300 border-t-0 rounded-b-full bg-white" style="margin-left: -1px;"></span>
             </div>
           </div>
-          <div class="px-4 pb-4 flex-1 overflow-y-auto">
-            <table class="w-full text-sm">
+          <div class="px-2 sm:px-4 pb-4 flex-1 overflow-auto">
+            <div class="overflow-x-auto min-w-0">
+            <table class="w-full text-sm min-w-[400px]">
               <thead>
                 <tr class="border-b-2 border-gray-200 text-gray-600 text-xs uppercase">
                   <th class="text-left py-2">Produto</th>
@@ -187,6 +188,7 @@
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
           <div class="border-t-2 border-gray-200 bg-gray-50 px-4 py-3 space-y-1">
             <div class="flex justify-between text-sm">
