@@ -104,7 +104,7 @@ onMounted(async () => {
     const { data } = await companyService.get()
     company.value = data || {}
     showFirstLoginInstructions.value = data?.show_first_login_instructions !== false
-    document.title = (data?.name || 'GB PET')
+    document.title = (data?.name || 'Sistema de Gestão para Pet Shop')
     document.body.setAttribute('data-theme', data?.theme || 'orange')
   } catch {
     company.value = {}

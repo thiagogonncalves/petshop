@@ -238,6 +238,7 @@
         <span class="text-white/60 shrink-0">|</span>
         <span class="shrink-0"><kbd class="px-1 py-0.5 bg-white/20 rounded text-xs">F3</kbd> Voltar</span>
         <span class="shrink-0"><kbd class="px-1 py-0.5 bg-white/20 rounded text-xs">F4</kbd> Consulta produto</span>
+        <span class="shrink-0"><kbd class="px-1 py-0.5 bg-white/20 rounded text-xs">F5</kbd> Cancelar venda</span>
       </div>
       <div class="flex items-center gap-2 shrink-0">
         <span class="text-white/90">Atendido por:</span>
@@ -391,6 +392,59 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal Cancelar venda -->
+    <div v-if="showCancelSaleModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" @click.self="closeCancelSaleModal">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 my-8">
+        <h3 class="text-xl font-bold text-red-800 mb-4">Cancelar venda concluída</h3>
+        <p class="text-sm text-gray-600 mb-4">Informe o número da venda e o motivo do cancelamento. O estoque dos itens será restaurado.</p>
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Número da venda</label>
+            <input
+              v-model.number="cancelSaleForm.saleId"
+              type="number"
+              min="1"
+              placeholder="Ex: 42"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Motivo do cancelamento <span class="text-red-500">*</span></label>
+            <textarea
+              v-model="cancelSaleForm.reason"
+              rows="3"
+              placeholder="Informe o motivo do cancelamento..."
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 resize-none"
+            />
+          </div>
+          <div class="border-t pt-4 mt-4">
+            <p class="text-sm font-medium text-gray-700 mb-2">Senha do supervisor (administrador)</p>
+            <input
+              v-model="cancelSaleForm.supervisorPassword"
+              type="password"
+              placeholder="Digite a senha do supervisor"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              autocomplete="current-password"
+            />
+            <p v-if="cancelSaleForm.error" class="text-sm text-red-600 mt-1">{{ cancelSaleForm.error }}</p>
+          </div>
+        </div>
+        <div class="mt-6 flex gap-3">
+          <button type="button" class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" @click="closeCancelSaleModal">
+            Fechar
+          </button>
+          <button
+            type="button"
+            class="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="cancelSaleSubmitting || !canConfirmCancelSale"
+            @click="confirmCancelSale"
+          >
+            {{ cancelSaleSubmitting ? 'Cancelando...' : 'Confirmar cancelamento' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -445,6 +499,15 @@ const consultaLoading = ref(false)
 const consultaInputRef = ref(null)
 let consultaDebounce = null
 
+const showCancelSaleModal = ref(false)
+const cancelSaleForm = ref({ saleId: '', reason: '', supervisorPassword: '', error: '' })
+const cancelSaleSubmitting = ref(false)
+
+const canConfirmCancelSale = computed(() => {
+  const f = cancelSaleForm.value
+  return f.saleId && (f.reason || '').trim() && (f.supervisorPassword || '').trim()
+})
+
 function openConsultaModal() {
   showConsultaModal.value = true
   consultaQuery.value = ''
@@ -456,6 +519,36 @@ function closeConsultaModal() {
   showConsultaModal.value = false
   consultaQuery.value = ''
   consultaResults.value = []
+}
+
+function openCancelSaleModal() {
+  showCancelSaleModal.value = true
+  cancelSaleForm.value = { saleId: '', reason: '', supervisorPassword: '', error: '' }
+}
+
+function closeCancelSaleModal() {
+  showCancelSaleModal.value = false
+  cancelSaleForm.value = { saleId: '', reason: '', error: '' }
+}
+
+async function confirmCancelSale() {
+  const f = cancelSaleForm.value
+  const saleId = f.saleId
+  const reason = (f.reason || '').trim()
+  const supervisorPassword = f.supervisorPassword || ''
+  if (!saleId || !reason || !supervisorPassword) return
+  cancelSaleForm.value.error = ''
+  cancelSaleSubmitting.value = true
+  try {
+    await salesService.cancelSale(saleId, reason, supervisorPassword)
+    closeCancelSaleModal()
+    alert('Venda cancelada com sucesso. O estoque foi restaurado.')
+  } catch (err) {
+    const msg = err.response?.data?.error || err.response?.data?.detail || 'Erro ao cancelar venda.'
+    cancelSaleForm.value.error = typeof msg === 'string' ? msg : (msg.detail || JSON.stringify(msg))
+  } finally {
+    cancelSaleSubmitting.value = false
+  }
 }
 
 watch(consultaQuery, (q) => {
@@ -489,9 +582,19 @@ function onKeydown(e) {
     openConsultaModal()
     return
   }
-  if (e.key === 'Escape' && showConsultaModal.value) {
+  if (e.key === 'F5') {
     e.preventDefault()
-    closeConsultaModal()
+    openCancelSaleModal()
+    return
+  }
+  if (e.key === 'Escape') {
+    if (showConsultaModal.value) {
+      e.preventDefault()
+      closeConsultaModal()
+    } else if (showCancelSaleModal.value) {
+      e.preventDefault()
+      closeCancelSaleModal()
+    }
   }
 }
 

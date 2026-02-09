@@ -359,7 +359,7 @@ onMounted(async () => {
   try {
     const { data } = await companyService.get()
     company.value = data || {}
-    document.title = (data?.name || 'GB PET') + ' - Agendar'
+    document.title = (data?.name || 'Sistema de Gestão para Pet Shop') + ' - Agendar'
   } catch {
     company.value = {}
   }

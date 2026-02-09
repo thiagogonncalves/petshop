@@ -2,9 +2,18 @@ import { defineStore } from 'pinia'
 import { authService } from '@/services/auth'
 import router from '@/router'
 
+function loadStoredUser() {
+  try {
+    const s = localStorage.getItem('auth_user')
+    return s ? JSON.parse(s) : null
+  } catch {
+    return null
+  }
+}
+
 export const useAuthStore = defineStore('auth', {
   state: () => ({
-    user: null,
+    user: loadStoredUser(),
     token: localStorage.getItem('token') || null,
     refreshToken: localStorage.getItem('refreshToken') || null,
   }),
@@ -32,9 +41,10 @@ export const useAuthStore = defineStore('auth', {
         this.token = data.access
         this.refreshToken = data.refresh
         this.user = data.user
-        
+
         localStorage.setItem('token', this.token)
         localStorage.setItem('refreshToken', this.refreshToken)
+        localStorage.setItem('auth_user', JSON.stringify(data.user))
         
         if (data.must_change_password) {
           router.push({ name: 'FirstLogin' })
@@ -52,11 +62,26 @@ export const useAuthStore = defineStore('auth', {
     
     async loadUser() {
       if (!this.token) return
-      
+
       try {
         this.user = await authService.getCurrentUser()
+        localStorage.setItem('auth_user', JSON.stringify(this.user))
       } catch (error) {
         this.logout()
+      }
+    },
+
+    async refreshAccessToken() {
+      if (!this.refreshToken) return null
+      try {
+        const data = await authService.refreshToken(this.refreshToken)
+        this.token = data.access
+        if (data.refresh) this.refreshToken = data.refresh
+        localStorage.setItem('token', this.token)
+        localStorage.setItem('refreshToken', this.refreshToken)
+        return this.token
+      } catch {
+        return null
       }
     },
     
@@ -66,6 +91,7 @@ export const useAuthStore = defineStore('auth', {
       this.refreshToken = null
       localStorage.removeItem('token')
       localStorage.removeItem('refreshToken')
+      localStorage.removeItem('auth_user')
       import('@/stores/subscription').then(({ useSubscriptionStore }) => {
         useSubscriptionStore().reset()
       }).catch(() => {})

@@ -66,19 +66,34 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-200">
-          <tr v-for="s in sales" :key="s.id" class="hover:bg-orange-50">
-            <td class="px-4 py-3 text-sm font-medium text-gray-900">#{{ s.id }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(s.sale_date) }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ s.created_by_name || '-' }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ s.client_name || '-' }}</td>
-            <td class="px-4 py-3 text-sm text-right font-medium">R$ {{ formatPrice(s.total) }}</td>
-            <td class="px-4 py-3 text-sm text-gray-600">{{ s.payment_method_display }}</td>
+          <tr
+            v-for="s in sales"
+            :key="s.id"
+            :class="[
+              'hover:bg-orange-50',
+              s.status === 'cancelled' ? 'bg-red-50/50' : ''
+            ]"
+          >
+            <td class="px-4 py-3 text-sm font-medium" :class="s.status === 'cancelled' ? 'line-through text-red-700' : 'text-gray-900'">#{{ s.id }}</td>
+            <td class="px-4 py-3 text-sm" :class="s.status === 'cancelled' ? 'line-through text-red-600' : 'text-gray-600'">{{ formatDate(s.sale_date) }}</td>
+            <td class="px-4 py-3 text-sm" :class="s.status === 'cancelled' ? 'line-through text-red-600' : 'text-gray-600'">{{ s.created_by_name || '-' }}</td>
+            <td class="px-4 py-3 text-sm" :class="s.status === 'cancelled' ? 'line-through text-red-600' : 'text-gray-600'">{{ s.client_name || '-' }}</td>
+            <td class="px-4 py-3 text-sm text-right font-medium" :class="s.status === 'cancelled' ? 'line-through text-red-600' : ''">R$ {{ formatPrice(s.total) }}</td>
+            <td class="px-4 py-3 text-sm" :class="s.status === 'cancelled' ? 'line-through text-red-600' : 'text-gray-600'">{{ s.payment_method_display }}</td>
             <td class="px-4 py-3">
               <span :class="statusClass(s.status)" class="px-2 py-0.5 rounded-full text-xs font-medium">
                 {{ s.status_display }}
               </span>
             </td>
             <td class="px-4 py-3 text-right">
+              <button
+                v-if="s.status === 'cancelled' && s.cancellation_reason"
+                type="button"
+                class="text-red-600 hover:text-red-800 hover:underline text-sm mr-2"
+                @click="showReasonModal = true; reasonToShow = s.cancellation_reason"
+              >
+                Ver motivo
+              </button>
               <router-link :to="{ name: 'Sales', query: { id: s.id } }" class="text-blue-600 hover:underline text-sm">
                 Ver
               </router-link>
@@ -89,7 +104,24 @@
           </tr>
         </tbody>
       </table>
-      <Pagination
+    <!-- Modal motivo do cancelamento -->
+    <div v-if="showReasonModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="showReasonModal = false">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+        <h3 class="text-lg font-bold text-red-800 mb-2">Motivo do cancelamento</h3>
+        <p class="text-gray-700 whitespace-pre-wrap">{{ reasonToShow || '-' }}</p>
+        <div class="mt-4">
+          <button
+            type="button"
+            class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-800"
+            @click="showReasonModal = false"
+          >
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <Pagination
         v-if="totalPages > 1"
         :current-page="page"
         :total-pages="totalPages"
@@ -111,7 +143,7 @@ const end = ref('')
 const userId = ref('')
 const status = ref('')
 const search = ref('')
-const includeCancelled = ref(false)
+const includeCancelled = ref(true)
 const sellers = ref([])
 const sales = ref([])
 const loading = ref(false)
@@ -120,6 +152,8 @@ const page = ref(1)
 const pageSize = ref(20)
 const totalPages = ref(1)
 const totalItems = ref(0)
+const showReasonModal = ref(false)
+const reasonToShow = ref('')
 
 function setDefaultPeriod() {
   const today = new Date()

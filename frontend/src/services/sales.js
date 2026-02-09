@@ -38,4 +38,12 @@ export const salesService = {
   getReceipt(saleId) {
     return api.get(`/sales/sales/${saleId}/receipt/`)
   },
+
+  /** Cancel a completed sale (restores stock). Requires reason and supervisor password (current user must be admin). */
+  cancelSale(saleId, reason, supervisorPassword) {
+    return api.post(`/sales/sales/${saleId}/cancel/`, {
+      reason,
+      supervisor_password: supervisorPassword,
+    })
+  },
 }

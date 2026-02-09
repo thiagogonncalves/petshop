@@ -168,8 +168,8 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
-  
-  // Se tem token mas user ainda não foi carregado (ex.: após refresh), carrega o usuário
+
+  // Só carrega user quando tem token mas não tem user (ex.: refresh sem auth_user no storage)
   if (authStore.token && !authStore.user) {
     try {
       await authStore.loadUser()

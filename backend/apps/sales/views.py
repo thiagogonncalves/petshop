@@ -271,6 +271,94 @@ class SaleViewSet(viewsets.ModelViewSet):
             resp_data['credit_account'] = CreditAccountSerializer(account).data
         return Response(resp_data, status=status.HTTP_201_CREATED)
 
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel a completed sale and restore stock. Requires supervisor (admin) credentials."""
+        sale = self.get_object()
+        reason = (request.data.get('reason') or '').strip()
+        sup_pass = request.data.get('supervisor_password') or ''
+
+        if not sup_pass:
+            return Response(
+                {'error': 'Senha do supervisor é obrigatória.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # O cancelamento só é autorizado se a senha pertencer a um usuário com perfil Administrador
+        # Primeiro rejeita se a senha for de qualquer usuário que NÃO seja Administrador
+        from apps.users.models import User, UserRole
+
+        non_admins = User.objects.filter(is_active=True).exclude(role=UserRole.ADMIN)
+        for u in non_admins:
+            if u.check_password(sup_pass):
+                return Response(
+                    {'error': 'A senha informada pertence a um usuário sem perfil de Administrador. Apenas a senha de um administrador pode autorizar o cancelamento.'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+        # Só então verifica se a senha pertence a um Administrador
+        admins = User.objects.filter(is_active=True, role=UserRole.ADMIN)
+        if not any(u.check_password(sup_pass) for u in admins):
+            return Response(
+                {'error': 'Senha incorreta. Informe a senha de um usuário com perfil Administrador.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        if sale.status not in ('paid', 'credit_open'):
+            return Response(
+                {'error': 'Somente vendas concluídas (pagas ou no crediário) podem ser canceladas.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        if sale.status == 'cancelled':
+            return Response(
+                {'error': 'Esta venda já está cancelada.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from apps.products.models import StockMovement
+
+        with transaction.atomic():
+            # Restore stock for each product item
+            for item in sale.items.filter(item_type='product'):
+                if item.product:
+                    product = item.product
+                    previous_stock = product.stock_quantity
+                    if product.unit == 'KG' and getattr(item, 'sold_by_kg', False):
+                        stock_delta = int(round(float(item.quantity) * 1000))
+                    else:
+                        stock_delta = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
+                    new_stock = previous_stock + stock_delta
+
+                    product.stock_quantity = new_stock
+                    product.save()
+
+                    StockMovement.objects.create(
+                        product=product,
+                        movement_type='entry',
+                        quantity=stock_delta,
+                        previous_stock=previous_stock,
+                        new_stock=new_stock,
+                        reference=f'Venda #{sale.id}',
+                        observation=f'Estorno por cancelamento da venda #{sale.id}' + (f': {reason[:200]}' if reason else ''),
+                        created_by=request.user,
+                    )
+
+            # Cancel credit account if exists (crediário)
+            try:
+                account = sale.credit_account
+                account.status = 'cancelled'
+                account.save()
+                account.installments.filter(status__in=['pending', 'overdue']).update(status='cancelled')
+            except CreditAccount.DoesNotExist:
+                pass
+
+            sale.status = 'cancelled'
+            sale.cancellation_reason = reason
+            sale.save()
+
+        serializer = self.get_serializer(sale)
+        return Response(serializer.data)
+
     @action(detail=True, methods=['get'], url_path='receipt')
     def receipt(self, request, pk=None):
         """Return structured data for thermal receipt (80mm)."""

@@ -112,7 +112,7 @@ onMounted(async () => {
   try {
     const { data } = await companyService.get()
     company.value = data || {}
-    document.title = (data?.name || 'GB PET')
+    document.title = (data?.name || 'Sistema de Gestão para Pet Shop')
   } catch {
     company.value = {}
   }

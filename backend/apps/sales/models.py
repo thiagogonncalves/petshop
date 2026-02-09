@@ -70,6 +70,7 @@ class Sale(models.Model):
         verbose_name='Status'
     )
     observations = models.TextField(blank=True, verbose_name='Observações')
+    cancellation_reason = models.TextField(blank=True, verbose_name='Motivo do cancelamento')
     
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')

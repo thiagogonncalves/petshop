@@ -75,7 +75,7 @@ class SaleSerializer(serializers.ModelSerializer):
             'id', 'client', 'client_name', 'sale_date', 'items',
             'subtotal', 'discount', 'total', 'payment_method',
             'payment_method_display', 'status', 'status_display',
-            'observations', 'created_at', 'updated_at',
+            'observations', 'cancellation_reason', 'created_at', 'updated_at',
             'created_by', 'created_by_name'
         ]
         read_only_fields = ['id', 'sale_date', 'subtotal', 'total', 'created_at', 'updated_at', 'created_by']

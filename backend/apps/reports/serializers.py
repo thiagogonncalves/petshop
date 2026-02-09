@@ -18,6 +18,7 @@ class ReportSaleListSerializer(serializers.ModelSerializer):
             'id', 'sale_date', 'created_by', 'created_by_name',
             'client', 'client_name', 'total', 'payment_method',
             'payment_method_display', 'status', 'status_display',
+            'cancellation_reason',
         ]
 
     def get_client_name(self, obj):

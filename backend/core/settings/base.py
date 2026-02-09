@@ -141,9 +141,9 @@ REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
 }
 
-# JWT Settings
+# JWT Settings (sessão: access 30 min, refresh 7 dias)
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=30),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
