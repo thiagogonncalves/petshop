@@ -44,7 +44,7 @@
                 >
                   <span
                     class="theme-nav-link border-transparent text-white inline-flex items-center px-3 py-2 border-b-2 text-sm font-medium transition-colors rounded-t-lg cursor-pointer"
-                    :class="{ 'theme-nav-link-active': isCadastroActive || (item.name === 'Crediário' && isCreditsActive) || (item.name === 'Relatórios' && isReportsActive) || (item.name === 'Administração' && isAdminActive) }"
+                    :class="{ 'theme-nav-link-active': isCadastroActive || (item.name === 'Crediário' && isCreditsActive) || (item.name === 'Contas a pagar' && isPayablesActive) || (item.name === 'Relatórios' && isReportsActive) || (item.name === 'Administração' && isAdminActive) }"
                   >
                     {{ item.name }}
                     <svg class="ml-1 w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -224,9 +224,11 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useCompanyStore } from '@/stores/company'
 import { useSubscriptionStore } from '@/stores/subscription'
+import { payablesService } from '@/services/payables'
 import packageJson from '../../package.json'
 
 const subscriptionStore = useSubscriptionStore()
+const payablesAlerts = ref({ overdue_count: 0, due_today_count: 0 })
 
 const route = useRoute()
 const router = useRouter()
@@ -259,6 +261,9 @@ function updateMobile() {
 function onVisibilityChange() {
   if (document.visibilityState === 'visible') {
     subscriptionStore.fetchStatus().catch(() => {})
+    payablesService.getAlerts().then(({ data }) => {
+      payablesAlerts.value = data
+    }).catch(() => {})
   }
 }
 
@@ -271,6 +276,9 @@ onMounted(() => {
   document.addEventListener('visibilitychange', onVisibilityChange)
   companyStore.fetchCompany()
   subscriptionStore.fetchStatus().finally(() => { subscriptionLoaded.value = true }).catch(() => {})
+  payablesService.getAlerts().then(({ data }) => {
+    payablesAlerts.value = data
+  }).catch(() => {})
 })
 onUnmounted(() => {
   document.removeEventListener('visibilitychange', onVisibilityChange)
@@ -306,6 +314,26 @@ const notifications = computed(() => {
       linkText: 'Ativar plano agora',
     })
   }
+  if (payablesAlerts.value.overdue_count > 0) {
+    list.push({
+      id: 'payables-overdue',
+      type: 'error',
+      title: 'Contas em atraso',
+      message: `${payablesAlerts.value.overdue_count} conta(s) a pagar em atraso.`,
+      link: '/payables',
+      linkText: 'Ver contas a pagar',
+    })
+  }
+  if (payablesAlerts.value.due_today_count > 0) {
+    list.push({
+      id: 'payables-due-today',
+      type: 'warning',
+      title: 'Contas vencem hoje',
+      message: `${payablesAlerts.value.due_today_count} conta(s) a pagar vence(m) hoje.`,
+      link: '/payables',
+      linkText: 'Ver contas a pagar',
+    })
+  }
   return list
 })
 
@@ -324,6 +352,7 @@ const isCadastroActive = computed(() => {
 })
 
 const isCreditsActive = computed(() => route.path.startsWith('/credits'))
+const isPayablesActive = computed(() => route.path.startsWith('/payables'))
 const isReportsActive = computed(() => route.path.startsWith('/reports'))
 const isAdminActive = computed(() => route.path.startsWith('/admin'))
 
@@ -344,6 +373,7 @@ const menuItems = computed(() => {
     { name: 'Agendamentos', path: '/scheduling' },
     { name: 'PDV', path: '/pdv', hideOnMobile: true },
     { name: 'Crediário', path: '/credits' },
+    { name: 'Contas a pagar', path: '/payables' },
   ]
   
   if (authStore.isAuthenticated) {
@@ -395,6 +425,13 @@ const logout = () => {
 }
 </style>
 <style>
+.receipt-print-page .no-print-main {
+  padding: 0.5rem !important;
+  max-width: none !important;
+  display: flex !important;
+  justify-content: center !important;
+}
+
 @media print {
   .receipt-print-page .no-print-nav,
   .receipt-print-page .no-print-footer {

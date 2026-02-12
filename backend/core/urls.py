@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/nfe/', include('apps.integrations.nfe.urls')),
     path('api/fiscal/', include('apps.fiscal.urls')),
     path('api/subscription/', include('apps.subscription.urls')),
+    path('api/payables/', include('apps.payables.urls')),
 ]
 
 # Media (uploads): sempre servir - nginx em produção faz proxy de /media/ para o backend

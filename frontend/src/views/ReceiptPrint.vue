@@ -5,9 +5,11 @@
     <div v-else ref="receiptRef" class="receipt-paper">
       <div class="receipt-header">
         <img
-          :src="mediaUrl(company.logo_url) || defaultLogo"
+          v-if="logoUrl"
+          :src="logoUrl"
           :alt="company.name || 'Logo'"
           class="receipt-logo"
+          crossorigin="anonymous"
         />
         <h1 class="receipt-title">{{ company.name || 'GB PET' }}</h1>
         <p v-if="company.cpf_cnpj" class="receipt-cpf">{{ company.cpf_cnpj }}</p>
@@ -52,7 +54,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import defaultLogo from '@/assets/logosemfundo.png'
 import { salesService } from '@/services/sales'
@@ -76,6 +78,15 @@ const receipt = ref({
 const loading = ref(true)
 const error = ref('')
 const receiptRef = ref(null)
+
+const logoUrl = computed(() => {
+  const u = company.value.logo_url ? mediaUrl(company.value.logo_url) : null
+  const src = u || defaultLogo
+  if (!src) return null
+  if (typeof src === 'string' && src.startsWith('http')) return src
+  if (typeof src === 'string' && src.startsWith('/')) return window.location.origin + src
+  return src
+})
 
 function formatDate(iso) {
   if (!iso) return '-'
@@ -148,12 +159,13 @@ watch(() => route.params.id, (id) => {
 .receipt-paper {
   width: 80mm;
   max-width: 80mm;
+  min-width: 80mm;
   margin: 0 auto;
-  padding: 8px;
+  padding: 4mm 6mm;
   background: white;
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
-  line-height: 1.35;
+  line-height: 1.4;
   color: #000;
   word-break: break-word;
 }
@@ -165,29 +177,34 @@ watch(() => route.params.id, (id) => {
 
 .receipt-logo {
   display: block;
-  max-height: 40px;
+  max-width: 56mm;
   width: auto;
+  height: auto;
+  max-height: 35px;
   margin: 0 auto 6px auto;
-  filter: brightness(0);
+  object-fit: contain;
 }
 
 .receipt-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   margin: 0;
+  text-align: center;
 }
 
 .receipt-cpf,
 .receipt-address {
   font-size: 10px;
   margin: 2px 0 0 0;
-  color: #444;
+  color: #000;
+  text-align: center;
 }
 
 .receipt-subtitle {
   font-size: 11px;
   margin: 2px 0 0 0;
-  color: #444;
+  color: #000;
+  text-align: center;
 }
 
 .receipt-meta {
@@ -202,7 +219,7 @@ watch(() => route.params.id, (id) => {
 
 .receipt-hr {
   border: none;
-  border-top: 1px dashed #999;
+  border-top: 1px dashed #000;
   margin: 6px 0;
 }
 
@@ -224,7 +241,7 @@ watch(() => route.params.id, (id) => {
 .item-line {
   margin: 2px 0 0 0;
   font-size: 11px;
-  color: #333;
+  color: #000;
 }
 
 .receipt-totals {
@@ -260,14 +277,34 @@ watch(() => route.params.id, (id) => {
   margin-top: 12px;
   font-size: 11px;
 }
+</style>
+<style>
+/* Estilos de impressão para impressora térmica 80mm - sem scoped para máxima compatibilidade */
+@page {
+  size: 80mm auto;
+  margin: 0;
+}
 
 @media print {
-  /* Imprime só o cupom: esconde carregando, erro e fundo da página */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 80mm !important;
+  }
+
   .receipt-root {
-    padding: 0;
-    margin: 0;
-    background: white;
-    min-height: auto;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    min-height: auto !important;
+    width: 80mm !important;
+    max-width: 80mm !important;
   }
 
   .receipt-root > *:not(.receipt-paper) {
@@ -275,14 +312,33 @@ watch(() => route.params.id, (id) => {
   }
 
   .receipt-paper {
-    box-shadow: none;
-    margin: 0;
-    padding: 8px;
+    width: 80mm !important;
+    max-width: 80mm !important;
+    min-width: 80mm !important;
+    margin: 0 !important;
+    padding: 4mm 6mm !important;
+    box-shadow: none !important;
   }
 
-  body {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+  .receipt-header,
+  .receipt-title,
+  .receipt-cpf,
+  .receipt-address,
+  .receipt-subtitle,
+  .receipt-meta,
+  .receipt-footer {
+    text-align: center !important;
+  }
+
+  .receipt-logo {
+    display: block !important;
+    max-width: 56mm !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  .receipt-totals {
+    text-align: right !important;
   }
 }
 </style>

@@ -95,6 +95,11 @@ const router = createRouter({
           component: () => import('@/views/Sales.vue'),
         },
         {
+          path: 'payables',
+          name: 'Payables',
+          component: () => import('@/views/Payables.vue'),
+        },
+        {
           path: 'credits',
           component: () => import('@/views/credits/CreditsLayout.vue'),
           children: [
