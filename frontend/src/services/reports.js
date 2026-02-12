@@ -1,6 +1,6 @@
 import api from './api'
 
-const BASE = '/reports'
+const BASE = 'reports'
 
 /** List of sellers (users with sales) for filter dropdowns */
 export function getSellers() {

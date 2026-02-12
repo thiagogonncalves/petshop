@@ -18,9 +18,8 @@
     </div>
 
     <!-- Tabela de Animais -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card -mx-3 sm:mx-0">
-      <div class="overflow-x-auto">
-      <table class="min-w-[640px] divide-y divide-gray-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card -mx-3 sm:mx-0">
+      <table class="min-w-[700px] w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
@@ -28,7 +27,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Espécie</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Raça</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Idade</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap min-w-[200px]">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -48,14 +47,16 @@
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
               {{ pet.age ? `${pet.age} anos` : '-' }}
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button @click="printCard(pet.id)" class="text-orange-600 hover:text-orange-800 mr-2" title="Imprimir Carteirinha">
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <div class="flex flex-wrap gap-2 justify-end items-center">
+                <button @click="printCard(pet.id)" class="text-orange-600 hover:text-orange-800" title="Imprimir Carteirinha">
                 <svg class="w-5 h-5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                 </svg>
               </button>
-              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(pet)">Editar</button>
-              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deletePet(pet.id)">Excluir</button>
+                <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(pet)">Editar</button>
+                <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deletePet(pet.id)">Excluir</button>
+              </div>
             </td>
           </tr>
           <tr v-if="pets.length === 0">
@@ -63,7 +64,6 @@
           </tr>
         </tbody>
       </table>
-      </div>
     </div>
 
     <!-- Modal de Animal -->

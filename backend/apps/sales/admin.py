@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Sale, SaleItem, Receipt, Invoice, CreditAccount, CreditInstallment
+from .models import Sale, SaleItem, SalePayment, Receipt, Invoice, CreditAccount, CreditInstallment
 
 
 class SaleItemInline(admin.TabularInline):
@@ -8,13 +8,19 @@ class SaleItemInline(admin.TabularInline):
     readonly_fields = ('total',)
 
 
+class SalePaymentInline(admin.TabularInline):
+    model = SalePayment
+    extra = 0
+    readonly_fields = ('payment_method', 'amount')
+
+
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
     list_display = ('id', 'client', 'total', 'payment_method', 'status', 'sale_date', 'created_by')
     list_filter = ('status', 'payment_method', 'sale_date')
     search_fields = ('client__name', 'id')
     readonly_fields = ('created_at', 'updated_at', 'created_by', 'subtotal', 'total')
-    inlines = [SaleItemInline]
+    inlines = [SaleItemInline, SalePaymentInline]
 
 
 @admin.register(SaleItem)

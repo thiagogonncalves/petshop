@@ -18,17 +18,16 @@
     </div>
 
     <!-- Tabela de Agendamentos -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card -mx-3 sm:mx-0">
-      <div class="overflow-x-auto">
-      <table class="min-w-[680px] divide-y divide-gray-200">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card -mx-3 sm:mx-0">
+      <table class="min-w-[760px] w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Data/Hora</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap">Data/Hora</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Cliente</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Animal</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Serviço</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap">Status</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap min-w-[220px]">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -43,10 +42,12 @@
                 {{ appointment.status_display }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-green-600 hover:text-green-900 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="completeAppointment(appointment.id)">Concluir</button>
-              <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="cancelAppointment(appointment.id)">Cancelar</button>
-              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(appointment)">Editar</button>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <div class="flex flex-wrap gap-2 justify-end">
+                <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-green-600 hover:text-green-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="completeAppointment(appointment.id)">Concluir</button>
+                <button v-if="appointment.status === 'scheduled'" type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="cancelAppointment(appointment.id)">Cancelar</button>
+                <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(appointment)">Editar</button>
+              </div>
             </td>
           </tr>
           <tr v-if="appointments.length === 0">
@@ -54,7 +55,6 @@
           </tr>
         </tbody>
       </table>
-      </div>
     </div>
 
     <!-- Modal de Agendamento -->

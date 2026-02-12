@@ -70,6 +70,16 @@ const router = createRouter({
           component: () => import('@/views/ImportNFe.vue'),
         },
         {
+          path: 'fiscal',
+          component: () => import('@/views/fiscal/FiscalLayout.vue'),
+          children: [
+            { path: '', redirect: { name: 'FiscalNFe' } },
+            { path: 'config', name: 'FiscalConfig', component: () => import('@/views/fiscal/FiscalConfig.vue'), meta: { requiresAdmin: true } },
+            { path: 'nfe', name: 'FiscalNFe', component: () => import('@/views/fiscal/FiscalNFe.vue') },
+            { path: 'nfe/:id', name: 'FiscalNFeDetail', component: () => import('@/views/fiscal/FiscalNFeDetail.vue') },
+          ],
+        },
+        {
           path: 'services',
           name: 'Services',
           component: () => import('@/views/Services.vue'),
@@ -103,10 +113,8 @@ const router = createRouter({
           path: 'reports',
           component: () => import('@/views/reports/ReportsLayout.vue'),
           children: [
-            { path: '', redirect: { name: 'ReportsDashboard' } },
-            { path: 'dashboard', name: 'ReportsDashboard', component: () => import('@/views/reports/ReportsDashboard.vue') },
+            { path: '', redirect: { name: 'ReportsSales' } },
             { path: 'sales', name: 'ReportsSales', component: () => import('@/views/reports/ReportsSales.vue') },
-            { path: 'products-sold', name: 'ReportsProductsSold', component: () => import('@/views/reports/ReportsProductsSold.vue') },
             { path: 'ranking', name: 'ReportsSalesRanking', component: () => import('@/views/reports/ReportsSalesRanking.vue') },
             { path: 'low-stock', name: 'ReportsLowStock', component: () => import('@/views/reports/ReportsLowStock.vue') },
             { path: 'top-clients', name: 'ReportsTopClients', component: () => import('@/views/reports/ReportsTopClients.vue') },

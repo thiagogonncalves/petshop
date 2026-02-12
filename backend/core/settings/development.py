@@ -2,6 +2,9 @@ from .base import *
 
 DEBUG = True
 
+# Em desenvolvimento: executa tarefas Celery de forma síncrona (sem Redis)
+CELERY_TASK_ALWAYS_EAGER = True
+
 # Allow all origins in development
 CORS_ALLOW_ALL_ORIGINS = True
 

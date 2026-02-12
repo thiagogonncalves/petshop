@@ -18,6 +18,7 @@ class Sale(models.Model):
         ('bank_transfer', 'Transferência Bancária'),
         ('installment', 'Parcelado'),
         ('crediario', 'Crediário da Casa'),
+        ('mixed', 'Misto (várias formas)'),
     ]
     
     STATUS_CHOICES = [
@@ -63,6 +64,30 @@ class Sale(models.Model):
         choices=PAYMENT_METHOD_CHOICES,
         verbose_name='Forma de Pagamento'
     )
+    change_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=Decimal('0.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Troco',
+        help_text='Valor do troco devolvido ao cliente (pagamento em dinheiro)'
+    )
+    cash_received = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal('0.00'))],
+        verbose_name='Valor recebido',
+        help_text='Valor recebido em dinheiro (quando há troco)'
+    )
+
+    def get_payment_breakdown(self):
+        """Retorna detalhamento dos pagamentos (quando houver mais de uma forma)."""
+        payments = list(self.payments.all().order_by('id').values('payment_method', 'amount'))
+        if payments:
+            return payments
+        return [{'payment_method': self.payment_method, 'amount': self.total}]
     status = models.CharField(
         max_length=15,
         choices=STATUS_CHOICES,
@@ -108,6 +133,37 @@ class Sale(models.Model):
         if self.pk:  # Update existing sale
             self.calculate_total()
         super().save(*args, **kwargs)
+
+
+class SalePayment(models.Model):
+    """Pagamento fracionado: uma venda pode ter várias formas de pagamento."""
+    PAYMENT_CHOICES = [
+        c for c in Sale.PAYMENT_METHOD_CHOICES if c[0] != 'crediario' and c[0] != 'mixed'
+    ]
+    sale = models.ForeignKey(
+        Sale,
+        on_delete=models.CASCADE,
+        related_name='payments',
+        verbose_name='Venda'
+    )
+    payment_method = models.CharField(
+        max_length=20,
+        choices=PAYMENT_CHOICES,
+        verbose_name='Forma de Pagamento'
+    )
+    amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.01'))],
+        verbose_name='Valor'
+    )
+
+    class Meta:
+        verbose_name = 'Pagamento da Venda'
+        verbose_name_plural = 'Pagamentos da Venda'
+
+    def __str__(self):
+        return f"{self.get_payment_method_display()}: R$ {self.amount}"
 
 
 class SaleItem(models.Model):

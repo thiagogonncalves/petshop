@@ -9,6 +9,6 @@ export const dashboardService = {
    * Retorna KPIs, agenda do dia, alertas, clientes, gráficos e insights.
    */
   getDashboardSummary(params = {}) {
-    return api.get('/reports/dashboard-summary/', { params })
+    return api.get('reports/dashboard-summary/', { params })
   },
 }

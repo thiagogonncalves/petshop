@@ -70,7 +70,73 @@
               </template>
             </div>
           </div>
-          <div class="flex items-center gap-1 sm:gap-4">
+          <div class="flex items-center gap-1 sm:gap-3">
+            <!-- Sino de notificações (hover) -->
+            <div class="relative group/notif">
+              <button
+                type="button"
+                class="relative p-2 rounded-lg text-white hover:bg-white/20 touch-manipulation"
+                aria-label="Notificações"
+              >
+                <svg class="w-5 h-5 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                </svg>
+                <span
+                  v-if="notificationCount > 0"
+                  class="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-amber-500 text-amber-950 text-xs font-bold"
+                >
+                  {{ notificationCount > 9 ? '9+' : notificationCount }}
+                </span>
+              </button>
+              <div
+                class="absolute right-0 top-full pt-1 w-80 max-h-[320px] overflow-y-auto opacity-0 invisible group-hover/notif:opacity-100 group-hover/notif:visible transition-all duration-150 z-50"
+              >
+                <div class="bg-white rounded-lg shadow-xl border border-gray-200 theme-card">
+                  <div class="px-4 py-3 border-b border-gray-100">
+                    <h3 class="font-semibold text-gray-800">Notificações</h3>
+                  </div>
+                  <div class="divide-y divide-gray-100">
+                    <div
+                      v-for="n in notifications"
+                      :key="n.id"
+                      class="px-4 py-3 flex items-start gap-3"
+                      :class="n.type === 'warning' ? 'bg-amber-50' : n.type === 'error' ? 'bg-red-50' : 'bg-gray-50'"
+                    >
+                      <span class="shrink-0 mt-0.5" :class="n.type === 'warning' ? 'text-amber-600' : n.type === 'error' ? 'text-red-600' : 'text-gray-500'">
+                        <svg v-if="n.type === 'error'" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        <svg v-else class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                        </svg>
+                      </span>
+                      <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium" :class="n.type === 'error' ? 'text-red-800' : n.type === 'warning' ? 'text-amber-900' : 'text-gray-800'">
+                          {{ n.title }}
+                        </p>
+                        <p class="text-sm mt-0.5" :class="n.type === 'error' ? 'text-red-700' : n.type === 'warning' ? 'text-amber-800' : 'text-gray-600'">
+                          {{ n.message }}
+                        </p>
+                        <router-link
+                          v-if="n.link"
+                          :to="n.link"
+                          class="inline-flex items-center gap-1 mt-2 text-sm font-semibold"
+                          :class="n.type === 'error' ? 'text-red-700 hover:text-red-800' : n.type === 'warning' ? 'text-amber-700 hover:text-amber-800' : 'text-gray-600 hover:text-gray-800'"
+                        >
+                          {{ n.linkText }}
+                          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                          </svg>
+                        </router-link>
+                      </div>
+                    </div>
+                    <div v-if="notifications.length === 0" class="px-4 py-6 text-center text-gray-500 text-sm">
+                      Nenhuma notificação
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
             <span class="hidden sm:inline text-sm text-white font-medium truncate max-w-[100px] lg:max-w-none">{{ userDisplayName }}</span>
             <button
               @click="logout"
@@ -190,22 +256,61 @@ function onKeydown(e) {
 function updateMobile() {
   isMobile.value = window.innerWidth < 640
 }
+function onVisibilityChange() {
+  if (document.visibilityState === 'visible') {
+    subscriptionStore.fetchStatus().catch(() => {})
+  }
+}
+
 onMounted(() => {
   updateClock()
   updateMobile()
   clockTimer = setInterval(updateClock, 1000)
   window.addEventListener('keydown', onKeydown)
   window.addEventListener('resize', updateMobile)
+  document.addEventListener('visibilitychange', onVisibilityChange)
   companyStore.fetchCompany()
-  subscriptionStore.fetchStatus().catch(() => {})
+  subscriptionStore.fetchStatus().finally(() => { subscriptionLoaded.value = true }).catch(() => {})
 })
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange)
   if (clockTimer) clearInterval(clockTimer)
   window.removeEventListener('keydown', onKeydown)
   window.removeEventListener('resize', updateMobile)
 })
 
 const user = computed(() => authStore.user)
+
+const subscriptionLoaded = ref(false)
+
+const notifications = computed(() => {
+  const list = []
+  if (!authStore.token || !subscriptionLoaded.value) return list
+  if (subscriptionStore.isReadOnly) {
+    list.push({
+      id: 'sub-expired',
+      type: 'error',
+      title: 'Assinatura expirada',
+      message: 'Modo leitura — você pode visualizar, mas não pode criar ou editar.',
+      link: '/admin/plan',
+      linkText: 'Renovar plano',
+    })
+  } else if (subscriptionStore.isTrial && subscriptionStore.daysRemainingTrial > 0) {
+    const d = subscriptionStore.daysRemainingTrial
+    list.push({
+      id: 'sub-trial',
+      type: 'warning',
+      title: 'Período de teste',
+      message: `${d} ${d === 1 ? 'dia' : 'dias'} restante${d === 1 ? '' : 's'} para ativar seu plano.`,
+      link: '/admin/plan',
+      linkText: 'Ativar plano agora',
+    })
+  }
+  return list
+})
+
+const notificationCount = computed(() => notifications.value.length)
+
 const userDisplayName = computed(() => {
   const u = authStore.user
   if (!u) return ''
@@ -246,9 +351,7 @@ const menuItems = computed(() => {
       type: 'dropdown',
       name: 'Relatórios',
       children: [
-        { name: 'Dashboard', path: '/reports/dashboard' },
         { name: 'Vendas', path: '/reports/sales' },
-        { name: 'Produtos Vendidos', path: '/reports/products-sold' },
         { name: 'Ranking de Vendedores', path: '/reports/ranking' },
         { name: 'Estoque Baixo', path: '/reports/low-stock' },
         { name: 'Top Clientes', path: '/reports/top-clients' },
@@ -266,6 +369,7 @@ const menuItems = computed(() => {
         { name: 'Usuários', path: '/admin/users' },
         { name: 'Perfis e Permissões', path: '/admin/roles' },
         { name: 'Logs de Acesso', path: '/admin/audit' },
+        { name: 'Configuração SEFAZ', path: '/fiscal/config' },
         { name: 'Configurações', path: '/admin/settings' },
       ],
     })

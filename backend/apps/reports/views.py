@@ -66,10 +66,18 @@ class DashboardSummaryView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        date_str = request.query_params.get('date')
-        data = get_dashboard_summary(target_date=date_str)
-        data = _serialize_decimals(data)
-        return Response(data)
+        import logging
+        logger = logging.getLogger(__name__)
+        try:
+            date_str = request.query_params.get('date')
+            data = get_dashboard_summary(target_date=date_str)
+            data = _serialize_decimals(data)
+            return Response(data)
+        except Exception as e:
+            logger.exception('Erro ao carregar dashboard-summary')
+            from django.conf import settings
+            detail = str(e) if settings.DEBUG else 'Erro interno ao carregar relatório. Verifique se as migrações foram aplicadas (python manage.py migrate).'
+            return Response({'detail': detail}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class SellersReportView(APIView):

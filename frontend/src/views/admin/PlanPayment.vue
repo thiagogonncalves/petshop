@@ -129,7 +129,7 @@ onMounted(async () => {
   try {
     await subStore.fetchStatus()
   } catch {
-    // Ignorar erro - status pode estar em cache
+    // Ignorar erro
   } finally {
     loading.value = false
   }

@@ -18,7 +18,7 @@
     </div>
 
     <!-- Tabela de Serviços -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
@@ -26,7 +26,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Valor</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Duração</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap min-w-[180px]">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -40,9 +40,11 @@
                 {{ service.is_active ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 mr-4 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(service)">Editar</button>
-              <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deleteService(service.id)">Excluir</button>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <div class="flex flex-wrap gap-2 justify-end">
+                <button type="button" :disabled="!subscriptionStore.canWrite" class="text-blue-600 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(service)">Editar</button>
+                <button type="button" :disabled="!subscriptionStore.canWrite" class="text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed" @click="deleteService(service.id)">Excluir</button>
+              </div>
             </td>
           </tr>
           <tr v-if="services.length === 0">

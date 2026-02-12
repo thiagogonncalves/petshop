@@ -48,7 +48,7 @@
     </div>
 
     <!-- Tabela -->
-    <div class="bg-white shadow-lg rounded-lg overflow-hidden border-2 theme-card">
+    <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card">
       <table class="min-w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
@@ -57,7 +57,7 @@
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Parcelas</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Próximo venc.</th>
             <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider">Ações</th>
+            <th class="px-6 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap min-w-[160px]">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
@@ -76,21 +76,23 @@
                 {{ item.status_display }}
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-              <router-link
-                :to="{ name: 'CreditDetail', params: { id: item.id } }"
-                class="text-orange-600 hover:text-orange-800 mr-4"
-              >
-                Ver
-              </router-link>
-              <button
-                v-if="item.status === 'open' && item.pending_count > 0"
-                type="button"
-                class="text-green-600 hover:text-green-800"
-                @click="router.push({ name: 'CreditDetail', params: { id: item.id } })"
-              >
-                Receber
-              </button>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+              <div class="flex flex-wrap gap-2 justify-end">
+                <router-link
+                  :to="{ name: 'CreditDetail', params: { id: item.id } }"
+                  class="text-orange-600 hover:text-orange-800"
+                >
+                  Ver
+                </router-link>
+                <button
+                  v-if="item.status === 'open' && item.pending_count > 0"
+                  type="button"
+                  class="text-green-600 hover:text-green-800"
+                  @click="router.push({ name: 'CreditDetail', params: { id: item.id } })"
+                >
+                  Receber
+                </button>
+              </div>
             </td>
           </tr>
           <tr v-if="loading">

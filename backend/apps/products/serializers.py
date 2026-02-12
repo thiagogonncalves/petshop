@@ -26,7 +26,7 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = [
             'id', 'name', 'description', 'category', 'category_name',
-            'barcode', 'sku', 'gtin', 'unit',
+            'barcode', 'sku', 'gtin', 'unit', 'units_per_package',
             'cost_price', 'profit_margin', 'sale_price', 'price_manually_set',
             'price_per_kg',
             'stock_quantity', 'min_stock', 'is_low_stock',
@@ -43,6 +43,18 @@ class ProductSerializer(serializers.ModelSerializer):
             return obj.image.url
         return None
 
+    def validate(self, attrs):
+        unit = attrs.get('unit', getattr(self.instance, 'unit', None))
+        if unit == 'PKG':
+            upp = attrs.get('units_per_package', getattr(self.instance, 'units_per_package', None) if self.instance else None)
+            if not upp or upp < 1:
+                raise serializers.ValidationError({
+                    'units_per_package': 'Informe quantas unidades formam o pacote (mínimo 1).'
+                })
+        elif 'unit' in attrs:
+            attrs['units_per_package'] = None
+        return attrs
+
 
 class ProductPdvSerializer(serializers.ModelSerializer):
     """Lightweight serializer for PDV: search and by-code."""
@@ -51,7 +63,7 @@ class ProductPdvSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = ['id', 'name', 'sku', 'gtin', 'unit', 'sale_price', 'price_per_kg', 'stock_balance', 'image_url']
+        fields = ['id', 'name', 'sku', 'gtin', 'unit', 'units_per_package', 'sale_price', 'price_per_kg', 'stock_balance', 'image_url']
 
     def get_image_url(self, obj):
         if obj.image:

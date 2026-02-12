@@ -1,16 +1,68 @@
 """
 Views de assinatura
 """
+import hmac
+import hashlib
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
+from django.conf import settings
 from datetime import timedelta
 
 from apps.users.models import CompanySettings
 from .models import Subscription, SubscriptionStatus, Plan
 from .services import create_mercado_pago_preference
+
+
+def _validate_mp_webhook_signature(request):
+    """
+    Valida assinatura x-signature do Mercado Pago (HMAC-SHA256).
+    Retorna True se válida ou se validação não configurada; False se inválida.
+    """
+    secret = getattr(settings, 'MERCADOPAGO_WEBHOOK_SECRET', '') or ''
+    if not secret:
+        return True  # Sem secret configurado, aceita
+
+    x_sig = request.headers.get('x-signature') or request.META.get('HTTP_X_SIGNATURE')
+    if not x_sig:
+        return True  # notification_url pode não enviar assinatura; aceita para compatibilidade
+
+    ts = v1_hash = None
+    for part in x_sig.split(','):
+        kv = part.split('=', 1)
+        if len(kv) == 2:
+            k, v = kv[0].strip(), kv[1].strip()
+            if k == 'ts':
+                ts = v
+            elif k == 'v1':
+                v1_hash = v
+
+    if not ts or not v1_hash:
+        return False
+
+    data_id = request.GET.get('data.id') or (request.data or {}).get('data', {}).get('id') or ''
+    if isinstance(data_id, (int, float)):
+        data_id = str(int(data_id))
+    if isinstance(data_id, str) and data_id.isalnum():
+        data_id = data_id.lower()
+    x_request_id = request.headers.get('x-request-id') or request.META.get('HTTP_X_REQUEST_ID') or ''
+
+    parts = []
+    if data_id:
+        parts.append(f'id:{data_id}')
+    if x_request_id:
+        parts.append(f'request-id:{x_request_id}')
+    parts.append(f'ts:{ts}')
+    manifest = ';'.join(parts) + ';'
+
+    expected = hmac.new(
+        secret.encode('utf-8'),
+        manifest.encode('utf-8'),
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, v1_hash)
 
 
 def _get_subscription():
@@ -101,16 +153,23 @@ def mp_webhook(request):
     Webhook Mercado Pago.
     POST /api/subscription/webhook
     Quando pagamento aprovado: status=ACTIVE, current_period_end.
+    Valida x-signature se MERCADOPAGO_WEBHOOK_SECRET estiver configurado.
     """
-    # Mercado Pago envia dados no body - tipo pode ser payment, preference, etc.
+    if not _validate_mp_webhook_signature(request):
+        return Response({'ok': False, 'detail': 'Invalid signature'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    # Mercado Pago envia: { "type": "payment", "data": { "id": "123" } }
     data = request.data or {}
+    notif_type = data.get('type', '')
     payment_id = data.get('data', {}).get('id') or data.get('id')
 
+    # Só processar notificações de pagamento (não preference)
+    if notif_type and notif_type != 'payment':
+        return Response({'ok': True})
     if not payment_id:
-        return Response({'ok': True})  # Ignorar se não tiver ID
+        return Response({'ok': True})
 
     try:
-        from django.conf import settings
         import mercadopago
         sdk = mercadopago.SDK(settings.MERCADOPAGO_ACCESS_TOKEN)
         result = sdk.payment().get(payment_id)

@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'apps.sales',
     'apps.reports',
     'apps.integrations',
+    'apps.fiscal',
 ]
 
 MIDDLEWARE = [
@@ -205,6 +206,28 @@ LOGGING = {
     },
 }
 
+# Celery
+CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_TIME_LIMIT = 120
+CELERY_TASK_SOFT_TIME_LIMIT = 90
+CELERY_BEAT_SCHEDULE = {
+    'fiscal-sync-nsu-daily': {
+        'task': 'apps.fiscal.tasks.sync_all_companies_by_nsu',
+        'schedule': 60 * 60 * 24,  # 24 horas
+        'options': {'queue': 'default'},
+        'kwargs': {'max_docs': 100},
+    },
+}
+
+# Fiscal - chave de criptografia (certificado, senha, XML)
+# Gere com: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+FISCAL_ENCRYPTION_KEY = config('DJANGO_FISCAL_ENCRYPTION_KEY', default='')
+
 # NF-e: importação por chave de acesso (opcional)
 # Ex: "https://api.exemplo.com/nfe/{access_key}/xml"
 NFE_FETCH_XML_URL_TEMPLATE = config('NFE_FETCH_XML_URL_TEMPLATE', default='')
@@ -215,4 +238,5 @@ MERCADOPAGO_WEBHOOK_URL = config(
     'MERCADOPAGO_WEBHOOK_URL',
     default='https://example.com/api/subscription/webhook/'
 )
+MERCADOPAGO_WEBHOOK_SECRET = config('MERCADOPAGO_WEBHOOK_SECRET', default='')
 FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')

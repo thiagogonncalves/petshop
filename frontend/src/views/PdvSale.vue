@@ -2,7 +2,7 @@
   <div class="pdv-page min-h-screen flex flex-col bg-[#e8e8e8] fixed inset-0 w-full h-full z-40 overflow-auto">
     <!-- Barra do nome do produto (destaque) -->
     <div class="bg-[#1e3a5f] text-white px-3 sm:px-6 py-4 sm:py-5 text-center min-h-[60px] sm:min-h-[72px] flex items-center justify-center">
-      <span class="text-lg sm:text-2xl font-semibold uppercase line-clamp-2">{{ currentProduct ? currentProduct.name : 'Digite o código ou nome do produto' }}</span>
+      <span class="text-lg sm:text-2xl font-semibold uppercase line-clamp-2">{{ currentProduct ? currentProduct.name : (cart.length === 0 ? 'CAIXA LIVRE — Digite o código ou nome do produto' : 'Digite o código ou nome do produto') }}</span>
     </div>
 
     <!-- Área central: painel esquerdo + cupom -->
@@ -55,7 +55,7 @@
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="block text-xs font-medium text-gray-600 mb-0.5">
-                  {{ currentProduct?.unit === 'KG' && soldByKgChoice === 'kg' ? 'Quantidade (kg)' : 'Quantidade' }}
+                  {{ currentProduct?.unit === 'KG' && soldByKgChoice === 'kg' ? 'Quantidade (kg)' : (currentProduct?.unit === 'PKG' ? 'Quantidade (pacotes)' : 'Quantidade') }}
                 </label>
                 <input
                   v-model.number="quantityToAdd"
@@ -67,7 +67,7 @@
                 />
               </div>
               <div>
-                <label class="block text-xs font-medium text-gray-600 mb-0.5">Preço Unit.</label>
+                <label class="block text-xs font-medium text-gray-600 mb-0.5">{{ currentProduct?.unit === 'PKG' ? 'Preço/pacote' : 'Preço Unit.' }}</label>
                 <input
                   v-model="unitPriceToAdd"
                   type="text"
@@ -119,6 +119,7 @@
               <span class="text-[#1e3a5f] font-semibold ml-2">
                 R$ {{ formatPrice(p.sale_price) }}
                 <template v-if="p.unit === 'KG' && p.price_per_kg"> / {{ formatPrice(p.price_per_kg) }}/kg</template>
+                <template v-else-if="p.unit === 'PKG' && p.units_per_package"> ({{ p.units_per_package }} un/pac)</template>
               </span>
             </button>
           </div>
@@ -234,7 +235,7 @@
           <span class="text-white/60 shrink-0">|</span>
         </template>
         <span class="shrink-0">F12 - Menu Fiscal</span>
-        <span class="font-medium shrink-0">Caixa Aberto</span>
+        <span class="font-medium shrink-0">CAIXA LIVRE</span>
         <span class="text-white/60 shrink-0">|</span>
         <span class="shrink-0"><kbd class="px-1 py-0.5 bg-white/20 rounded text-xs">F3</kbd> Voltar</span>
         <span class="shrink-0"><kbd class="px-1 py-0.5 bg-white/20 rounded text-xs">F4</kbd> Consulta produto</span>
@@ -279,7 +280,10 @@
               <tr v-for="p in consultaResults" :key="p.id" class="border-b border-gray-100 hover:bg-gray-50">
                 <td class="py-3 pr-4 font-medium text-gray-800">{{ p.name }}</td>
                 <td class="py-3 pr-4 text-gray-600">{{ p.sku || p.gtin || '-' }}</td>
-                <td class="py-3 pr-4 text-right text-gray-700">{{ p.stock_balance ?? p.stock_quantity ?? 0 }}</td>
+                <td class="py-3 pr-4 text-right text-gray-700">
+                  <template v-if="p.unit === 'PKG' && p.units_per_package">{{ Math.floor((p.stock_balance ?? p.stock_quantity ?? 0) / p.units_per_package) }} pac</template>
+                  <template v-else>{{ p.stock_balance ?? p.stock_quantity ?? 0 }}</template>
+                </td>
                 <td class="py-3 text-right font-semibold text-[#1e3a5f]">R$ {{ formatPrice(p.sale_price) }}</td>
               </tr>
               <tr v-if="consultaQuery.trim() && !consultaLoading && consultaResults.length === 0">
@@ -300,96 +304,131 @@
       </div>
     </div>
 
-    <!-- Modal Finalizar -->
+    <!-- Modal Finalizar / Receber -->
     <div v-if="showCheckoutModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto" @click.self="closeCheckoutModal">
       <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 my-8">
-        <h3 class="text-xl font-bold text-gray-800 mb-4">Finalizar venda</h3>
-        <div class="space-y-4">
-          <label v-if="checkout.paymentMethod !== 'crediario'" class="flex items-center gap-2">
-            <input v-model="checkout.isWalkIn" type="checkbox" class="rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]" />
-            <span>Venda avulsa</span>
-          </label>
-          <p v-else class="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">Crediário exige cliente cadastrado. Venda avulsa bloqueada.</p>
-          <div v-if="!checkout.isWalkIn || checkout.paymentMethod === 'crediario'">
-            <label class="block text-sm font-medium text-gray-700 mb-1">CPF do cliente</label>
-            <input
-              v-model="checkout.cpf"
-              type="text"
-              placeholder="000.000.000-00"
-              maxlength="14"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-              @input="maskCpf"
-            />
-            <button
-              type="button"
-              class="mt-1 text-sm text-[#1e3a5f] hover:underline"
-              @click="searchClientByCpf"
-            >
-              Buscar cliente
-            </button>
-            <p v-if="checkout.clientName" class="text-sm text-green-700 mt-1">{{ checkout.clientName }}</p>
-            <p v-if="checkout.cpfError" class="text-sm text-red-600 mt-1">{{ checkout.cpfError }}</p>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Forma de pagamento</label>
-            <select v-model="checkout.paymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @change="onPaymentMethodChange">
-              <option value="cash">Dinheiro</option>
-              <option value="pix">PIX</option>
-              <option value="credit_card">Cartão de Crédito</option>
-              <option value="debit_card">Cartão de Débito</option>
-              <option value="bank_transfer">Transferência</option>
-              <option value="crediario">Crediário da Casa</option>
-            </select>
-          </div>
-          <div v-if="checkout.paymentMethod === 'crediario'" class="space-y-3 border-t pt-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Entrada (opcional)</label>
+        <!-- Step: Cliente + forma (quando crediário) ou início do fluxo de pagamento -->
+        <template v-if="checkout.step === 'client'">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">Finalizar venda</h3>
+          <div class="space-y-4">
+            <label v-if="checkout.paymentMethod !== 'crediario'" class="flex items-center gap-2">
+              <input v-model="checkout.isWalkIn" type="checkbox" class="rounded border-gray-300 text-[#1e3a5f] focus:ring-[#1e3a5f]" />
+              <span>Venda avulsa</span>
+            </label>
+            <p v-else class="text-sm text-amber-700 bg-amber-50 px-3 py-2 rounded-lg">Crediário exige cliente cadastrado.</p>
+            <div v-if="!checkout.isWalkIn || checkout.paymentMethod === 'crediario'">
+              <label class="block text-sm font-medium text-gray-700 mb-1">CPF do cliente</label>
               <input
-                v-model.number="checkout.downPayment"
+                v-model="checkout.cpf"
+                type="text"
+                placeholder="000.000.000-00"
+                maxlength="14"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+                @input="maskCpf"
+              />
+              <button type="button" class="mt-1 text-sm text-[#1e3a5f] hover:underline" @click="searchClientByCpf">Buscar cliente</button>
+              <p v-if="checkout.clientName" class="text-sm text-green-700 mt-1">{{ checkout.clientName }}</p>
+              <p v-if="checkout.cpfError" class="text-sm text-red-600 mt-1">{{ checkout.cpfError }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Forma de pagamento</label>
+              <select v-model="checkout.paymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @change="onPaymentMethodChange">
+                <option value="cash">Dinheiro</option>
+                <option value="pix">PIX</option>
+                <option value="credit_card">Cartão de Crédito</option>
+                <option value="debit_card">Cartão de Débito</option>
+                <option value="bank_transfer">Transferência</option>
+                <option value="crediario">Crediário da Casa</option>
+              </select>
+            </div>
+            <div v-if="checkout.paymentMethod === 'crediario'" class="space-y-3 border-t pt-3">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Entrada (opcional)</label>
+                <input v-model.number="checkout.downPayment" type="number" min="0" step="0.01" placeholder="0,00" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @input="updateInstallmentPreview" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Número de parcelas (1–12)</label>
+                <select v-model.number="checkout.installmentsCount" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @change="updateInstallmentPreview">
+                  <option v-for="n in 12" :key="n" :value="n">{{ n }}</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">{{ checkout.installmentsCount === 1 ? 'Data de vencimento' : 'Primeiro vencimento' }}</label>
+                <input v-model="checkout.firstDueDate" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @change="updateInstallmentPreview" />
+              </div>
+              <div v-if="installmentPreview.length > 0" class="bg-gray-50 rounded-lg p-3 max-h-32 overflow-y-auto">
+                <p class="text-xs font-medium text-gray-600 mb-2">Preview das parcelas</p>
+                <p v-for="p in installmentPreview" :key="p.number" class="text-sm text-gray-700">{{ p.number }}/{{ installmentPreview.length }} – venc. {{ p.dueDate }} – R$ {{ p.amount }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="mt-6 flex gap-3">
+            <button type="button" class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" @click="closeCheckoutModal">Cancelar</button>
+            <button v-if="checkout.paymentMethod === 'crediario'" type="button" class="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700" :disabled="checkoutSubmitting || !canConfirmCrediario" @click="confirmSale">Confirmar venda</button>
+            <button v-else type="button" class="flex-1 py-2 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2a4a7a]" :disabled="!canGoToPayment" @click="goToPaymentStep">Continuar</button>
+          </div>
+        </template>
+
+        <!-- Step: Receber pagamento (passo a passo) -->
+        <template v-else-if="checkout.step === 'payment'">
+          <h3 class="text-xl font-bold text-gray-800 mb-4">{{ collectedPaymentsTotal > 0 ? 'Restante a receber' : 'Receber pagamento' }}</h3>
+          <div class="space-y-4">
+            <div class="bg-gray-50 rounded-lg p-4">
+              <p class="text-sm text-gray-600">Total da venda</p>
+              <p class="text-2xl font-bold text-[#1e3a5f]">R$ {{ formatPrice(cartTotal) }}</p>
+              <p v-if="collectedPaymentsTotal > 0" class="text-sm text-green-700 mt-2">Já recebido: R$ {{ formatPrice(collectedPaymentsTotal) }}</p>
+              <p class="text-lg font-semibold text-gray-800 mt-1">Restante: R$ {{ formatPrice(remainingToPay) }}</p>
+            </div>
+            <div v-if="checkout.collectedPayments.length > 0" class="text-sm text-gray-600">
+              <p class="font-medium mb-1">Pagamentos recebidos:</p>
+              <p v-for="(p, i) in checkout.collectedPayments" :key="i">{{ paymentMethodLabel(p.method) }}: R$ {{ formatPrice(p.amount) }}</p>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Forma de pagamento</label>
+              <select v-model="checkout.currentPaymentMethod" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+                <option value="cash">Dinheiro</option>
+                <option value="pix">PIX</option>
+                <option value="credit_card">Cartão de Crédito</option>
+                <option value="debit_card">Cartão de Débito</option>
+                <option value="bank_transfer">Transferência</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Valor recebido</label>
+              <input
+                ref="amountReceivedInputRef"
+                v-model="checkout.amountReceived"
                 type="number"
                 min="0"
                 step="0.01"
                 placeholder="0,00"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                @input="updateInstallmentPreview"
+                class="w-full px-3 py-3 border-2 border-gray-300 rounded-lg text-lg text-right font-semibold"
+                @keydown.enter.prevent="onReceberClick"
               />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Número de parcelas (1–12)</label>
-              <select v-model.number="checkout.installmentsCount" class="w-full px-3 py-2 border border-gray-300 rounded-lg" @change="updateInstallmentPreview">
-                <option v-for="n in 12" :key="n" :value="n">{{ n }}</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ checkout.installmentsCount === 1 ? 'Data de vencimento' : 'Primeiro vencimento' }}</label>
-              <input
-                v-model="checkout.firstDueDate"
-                type="date"
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                @change="updateInstallmentPreview"
-              />
-            </div>
-            <div v-if="installmentPreview.length > 0" class="bg-gray-50 rounded-lg p-3 max-h-32 overflow-y-auto">
-              <p class="text-xs font-medium text-gray-600 mb-2">Preview das parcelas</p>
-              <p v-for="p in installmentPreview" :key="p.number" class="text-sm text-gray-700">
-                {{ p.number }}/{{ installmentPreview.length }} – venc. {{ p.dueDate }} – R$ {{ p.amount }}
-              </p>
             </div>
           </div>
-        </div>
-        <div class="mt-6 flex gap-3">
-          <button type="button" class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" @click="closeCheckoutModal">
-            Cancelar
-          </button>
-          <button
-            type="button"
-            class="flex-1 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            :disabled="checkoutSubmitting || !canConfirmSale"
-            @click="confirmSale"
-          >
-            {{ checkoutSubmitting ? 'Processando...' : 'Confirmar venda' }}
-          </button>
-        </div>
+          <div class="mt-6 flex gap-3">
+            <button type="button" class="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50" @click="backToClientStep">Voltar</button>
+            <button
+              type="button"
+              class="flex-1 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-bold"
+              :disabled="!canReceber"
+              @click="onReceberClick"
+            >
+              Receber
+            </button>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Modal Troco -->
+    <div v-if="showTrocoModal" class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" @click.self="closeTrocoModal">
+      <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full p-8 text-center">
+        <h3 class="text-xl font-bold text-gray-800 mb-2">Troco</h3>
+        <p class="text-4xl font-bold text-green-600 mb-6">R$ {{ formatPrice(trocoAmount) }}</p>
+        <p class="text-sm text-gray-600 mb-6">Devolva este valor ao cliente.</p>
+        <button type="button" class="w-full py-3 bg-[#1e3a5f] text-white rounded-lg font-bold" @click="closeTrocoModal">OK</button>
       </div>
     </div>
 
@@ -481,15 +520,23 @@ const globalDiscount = ref(0)
 const showCheckoutModal = ref(false)
 const checkoutSubmitting = ref(false)
 const checkout = ref({
+  step: 'client',
   isWalkIn: true,
   cpf: '',
   clientName: '',
   cpfError: '',
   paymentMethod: 'pix',
+  collectedPayments: [],
+  currentPaymentMethod: 'cash',
+  amountReceived: '',
   downPayment: 0,
   installmentsCount: 6,
   firstDueDate: '',
 })
+const amountReceivedInputRef = ref(null)
+const showTrocoModal = ref(false)
+const trocoAmount = ref(0)
+const saleIdForReceiptAfterTroco = ref(null)
 const installmentPreview = ref([])
 
 const showConsultaModal = ref(false)
@@ -655,19 +702,142 @@ function updateInstallmentPreview() {
   installmentPreview.value = preview
 }
 
-const canConfirmSale = computed(() => {
-  if (checkout.value.paymentMethod === 'crediario') {
-    const cpfOk = checkout.value.cpf.replace(/\D/g, '').length === 11
-    const clientOk = !!checkout.value.clientName
-    const dateOk = !!checkout.value.firstDueDate
-    const instOk = (Number(checkout.value.installmentsCount) || 0) >= 1
-    return cpfOk && clientOk && dateOk && instOk
-  }
+const collectedPaymentsTotal = computed(() => {
+  return checkout.value.collectedPayments.reduce((s, p) => s + (Number(p.amount) || 0), 0)
+})
+
+const remainingToPay = computed(() => {
+  return Math.max(0, Math.round((cartTotal.value - collectedPaymentsTotal.value) * 100) / 100)
+})
+
+const canGoToPayment = computed(() => {
+  if (checkout.value.paymentMethod === 'crediario') return false
   if (!checkout.value.isWalkIn) {
     return checkout.value.cpf.replace(/\D/g, '').length === 11 && !!checkout.value.clientName
   }
   return true
 })
+
+const canConfirmCrediario = computed(() => {
+  if (checkout.value.paymentMethod !== 'crediario') return false
+  const cpfOk = checkout.value.cpf.replace(/\D/g, '').length === 11
+  const clientOk = !!checkout.value.clientName
+  const dateOk = !!checkout.value.firstDueDate
+  const instOk = (Number(checkout.value.installmentsCount) || 0) >= 1
+  return cpfOk && clientOk && dateOk && instOk
+})
+
+const canReceber = computed(() => {
+  const amt = parseFloat(String(checkout.value.amountReceived).replace(',', '.')) || 0
+  return amt > 0
+})
+
+function paymentMethodLabel(code) {
+  const map = { cash: 'Dinheiro', pix: 'PIX', credit_card: 'Cartão de Crédito', debit_card: 'Cartão de Débito', bank_transfer: 'Transferência' }
+  return map[code] || code
+}
+
+function goToPaymentStep() {
+  checkout.value.step = 'payment'
+  checkout.value.collectedPayments = []
+  checkout.value.currentPaymentMethod = checkout.value.paymentMethod
+  checkout.value.amountReceived = ''
+  nextTick(() => amountReceivedInputRef.value?.focus())
+}
+
+function backToClientStep() {
+  checkout.value.step = 'client'
+}
+
+function openReceiptInNewTab(saleId) {
+  const url = router.resolve({ name: 'ReceiptPrint', params: { id: String(saleId) } }).href
+  window.open(url, '_blank')
+}
+
+function closeTrocoModal() {
+  showTrocoModal.value = false
+  const sid = saleIdForReceiptAfterTroco.value
+  trocoAmount.value = 0
+  saleIdForReceiptAfterTroco.value = null
+  if (sid) {
+    openReceiptInNewTab(sid)
+  }
+  nextTick(() => searchInputRef.value?.focus())
+}
+
+function onReceberClick() {
+  const amt = parseFloat(String(checkout.value.amountReceived).replace(',', '.')) || 0
+  if (amt <= 0) return
+  const remaining = remainingToPay.value
+  const method = checkout.value.currentPaymentMethod
+
+  if (amt < remaining) {
+    checkout.value.collectedPayments.push({ method, amount: amt })
+    checkout.value.amountReceived = ''
+    nextTick(() => amountReceivedInputRef.value?.focus())
+    return
+  }
+
+  const toRecord = remaining > 0 ? remaining : amt
+  checkout.value.collectedPayments.push({ method, amount: toRecord })
+  let troco = 0
+  let cashReceived = null
+  if (method === 'cash' && amt > remaining) {
+    troco = Math.round((amt - remaining) * 100) / 100
+    cashReceived = amt
+  }
+  confirmSaleWithPayments(troco, cashReceived)
+}
+
+function confirmSaleWithPayments(troco, cashReceived) {
+  const items = cart.value.map(l => ({
+    product_id: l.product_id,
+    quantity: String(parseFloat(l.quantity) || 1),
+    sold_by_kg: Boolean(l.sold_by_kg),
+    unit_price: String(l.unit_price),
+    discount: String(Number(l.discount) || 0),
+  }))
+  const payload = {
+    is_walk_in: checkout.value.isWalkIn,
+    items,
+    discount: String(Number(globalDiscount.value) || 0),
+    payments: checkout.value.collectedPayments.map((p) => ({
+      payment_method: p.method,
+      amount: String(Number(p.amount).toFixed(2)),
+    })),
+  }
+  if (troco > 0) {
+    payload.change_amount = String(troco.toFixed(2))
+    if (cashReceived != null) {
+      payload.cash_received = String(cashReceived.toFixed(2))
+    }
+  }
+  const cpfDigits = checkout.value.cpf.replace(/\D/g, '')
+  if (!checkout.value.isWalkIn && cpfDigits) {
+    payload.cpf = cpfDigits
+  }
+  checkoutSubmitting.value = true
+  salesService.pdvCreate(payload).then(({ data }) => {
+    closeCheckoutModal()
+    cart.value = []
+    globalDiscount.value = 0
+    const saleId = data.id
+    if (troco > 0) {
+      trocoAmount.value = troco
+      saleIdForReceiptAfterTroco.value = saleId
+      showTrocoModal.value = true
+    } else {
+      openReceiptInNewTab(saleId)
+      nextTick(() => searchInputRef.value?.focus())
+    }
+  }).catch((err) => {
+    const res = err.response?.data
+    const msg = res?.items || res?.cpf || res?.payments || res?.detail || 'Erro ao finalizar venda'
+    alert(Array.isArray(msg) ? msg[0] : (typeof msg === 'object' ? JSON.stringify(msg) : msg))
+  }).finally(() => {
+    checkoutSubmitting.value = false
+  })
+}
 
 function parseDecimal(str) {
   if (str === '' || str == null) return 0
@@ -700,7 +870,12 @@ const cartTotal = computed(() => {
 watch(currentProduct, (p) => {
   if (p) {
     soldByKgChoice.value = 'whole'
-    unitPriceToAdd.value = String(p.sale_price ?? 0).replace('.', ',')
+    if (p.unit === 'PKG' && p.units_per_package) {
+      const pricePerPackage = (parseFloat(p.sale_price) || 0) * (p.units_per_package || 1)
+      unitPriceToAdd.value = String(pricePerPackage).replace('.', ',')
+    } else {
+      unitPriceToAdd.value = String(p.sale_price ?? 0).replace('.', ',')
+    }
     quantityToAdd.value = 1
     discountToAdd.value = '0'
   }
@@ -789,7 +964,20 @@ function addCurrentToCart() {
   const qty = sellByKg
     ? Math.max(0.001, parseFloat(quantityToAdd.value) || 0.001)
     : Math.max(1, parseInt(quantityToAdd.value) || 1)
-  const price = parseDecimal(unitPriceToAdd.value) || (sellByKg ? parseFloat(p.price_per_kg) : parseFloat(p.sale_price)) || 0.01
+  const available = Number(p.stock_balance ?? p.stock_quantity ?? 0)
+  const existingInCart = cart.value
+    .filter((l) => l.product_id === p.id && l.sold_by_kg === sellByKg)
+    .reduce((sum, l) => sum + (parseFloat(l.quantity) || 0), 0)
+  const totalQty = existingInCart + qty
+  const unitsPerPkg = p.unit === 'PKG' ? (Number(p.units_per_package) || 1) : 1
+  const stockNeeded = sellByKg ? Math.round(totalQty * 1000) : (p.unit === 'PKG' ? Math.round(totalQty) * unitsPerPkg : Math.round(totalQty))
+  if (stockNeeded > available) {
+    const disp = sellByKg ? (available / 1000).toFixed(3) : (p.unit === 'PKG' ? Math.floor(available / unitsPerPkg) : available)
+    const unit = sellByKg ? 'kg' : (p.unit === 'PKG' ? 'pac' : 'un')
+    alert(`Estoque insuficiente para ${p.name}.\nDisponível: ${disp} ${unit}`)
+    return
+  }
+  const price = parseDecimal(unitPriceToAdd.value) || (sellByKg ? parseFloat(p.price_per_kg) : (p.unit === 'PKG' ? (parseFloat(p.sale_price) || 0) * unitsPerPkg : parseFloat(p.sale_price))) || 0.01
   const disc = Math.max(0, parseDecimal(discountToAdd.value))
   const existing = cart.value.find(l => l.product_id === p.id && l.unit_price === price && l.sold_by_kg === sellByKg)
   if (existing) {
@@ -798,7 +986,7 @@ function addCurrentToCart() {
   } else {
     cart.value.push({
       product_id: p.id,
-      name: p.name + (sellByKg ? ' (kg)' : ''),
+      name: p.name + (sellByKg ? ' (kg)' : (p.unit === 'PKG' ? ' (pac)' : '')),
       unit_price: price,
       quantity: qty,
       discount: disc,
@@ -807,8 +995,10 @@ function addCurrentToCart() {
   }
   searchQuery.value = ''
   suggestions.value = []
-  quantityToAdd.value = sellByKg ? 0.5 : 1
-  unitPriceToAdd.value = sellByKg ? String(p.price_per_kg ?? 0).replace('.', ',') : String(p.sale_price ?? 0).replace('.', ',')
+  currentProduct.value = null
+  soldByKgChoice.value = 'whole'
+  quantityToAdd.value = 1
+  unitPriceToAdd.value = ''
   discountToAdd.value = '0'
   nextTick(() => searchInputRef.value?.focus())
 }
@@ -834,11 +1024,15 @@ function formatPrice(v) {
 
 function openCheckoutModal() {
   checkout.value = {
+    step: 'client',
     isWalkIn: true,
     cpf: '',
     clientName: '',
     cpfError: '',
     paymentMethod: 'pix',
+    collectedPayments: [],
+    currentPaymentMethod: 'cash',
+    amountReceived: '',
     downPayment: 0,
     installmentsCount: 6,
     firstDueDate: getDefaultFirstDueDate(),
@@ -879,6 +1073,7 @@ function searchClientByCpf() {
 }
 
 function confirmSale() {
+  if (checkout.value.paymentMethod !== 'crediario') return
   const items = cart.value.map(l => ({
     product_id: l.product_id,
     quantity: String(parseFloat(l.quantity) || 1),
@@ -886,28 +1081,23 @@ function confirmSale() {
     unit_price: String(l.unit_price),
     discount: String(Number(l.discount) || 0),
   }))
-  const payload = {
-    is_walk_in: checkout.value.paymentMethod === 'crediario' ? false : checkout.value.isWalkIn,
-    items,
-    payment_method: checkout.value.paymentMethod,
-    discount: String(Number(globalDiscount.value) || 0),
-  }
   const cpfDigits = checkout.value.cpf.replace(/\D/g, '')
-  if (checkout.value.paymentMethod === 'crediario') {
-    payload.client_cpf = cpfDigits
-    payload.down_payment = String(Number(checkout.value.downPayment) || 0)
-    payload.installments_count = Number(checkout.value.installmentsCount) || 6
-    payload.first_due_date = checkout.value.firstDueDate
-  } else if (!checkout.value.isWalkIn && cpfDigits) {
-    payload.cpf = cpfDigits
+  const payload = {
+    is_walk_in: false,
+    items,
+    payment_method: 'crediario',
+    discount: String(Number(globalDiscount.value) || 0),
+    client_cpf: cpfDigits,
+    down_payment: String(Number(checkout.value.downPayment) || 0),
+    installments_count: Number(checkout.value.installmentsCount) || 6,
+    first_due_date: checkout.value.firstDueDate,
   }
   checkoutSubmitting.value = true
   salesService.pdvCreate(payload).then(({ data }) => {
     closeCheckoutModal()
     cart.value = []
     globalDiscount.value = 0
-    const saleId = data.id
-    router.push({ name: 'ReceiptPrint', params: { id: String(saleId) } })
+    openReceiptInNewTab(data.id)
     nextTick(() => searchInputRef.value?.focus())
   }).catch((err) => {
     const res = err.response?.data

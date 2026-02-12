@@ -1,0 +1,27 @@
+{
+  "_comment": "Endpoints NFeDistribuicaoDFe por UF. Fallback AN para UFs não listadas.",
+  "production": {
+    "AN": "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
+    "SVRS": "https://www1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
+    "SP": "https://nfe.fazenda.sp.gov.br/ws/nfedistribuicaodfe.asmx",
+    "MG": "https://nfe.fazenda.mg.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "PR": "https://nfe.sefa.pr.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "RS": "https://nfe.sefaz.rs.gov.br/ws/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "BA": "https://nfe.sefaz.ba.gov.br/webservices/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "GO": "https://nfe.sefaz.go.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "PE": "https://nfe.sefaz.pe.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "MS": "https://nfe.sefaz.ms.gov.br/ws/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "MT": "https://nfe.sefaz.mt.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "AM": "https://nfe.sefaz.am.gov.br/services2/services/NfeDistribuicaoDFe"
+  },
+  "homologation": {
+    "AN": "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
+    "SVRS": "https://hom1.nfe.fazenda.gov.br/NFeDistribuicaoDFe/NFeDistribuicaoDFe.asmx",
+    "SP": "https://homologacao.nfe.fazenda.sp.gov.br/ws/nfedistribuicaodfe.asmx",
+    "MG": "https://hnfe.fazenda.mg.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "PR": "https://homologacao.nfe.sefa.pr.gov.br/nfedistribuicaodfe/nfedistribuicaodfe.asmx",
+    "RS": "https://nfe-homologacao.sefaz.rs.gov.br/ws/nfedistribuicaodfe/nfedistribuicaodfe.asmx"
+  },
+  "uf_to_svrs": ["AC", "AL", "AP", "CE", "DF", "ES", "PA", "PB", "PI", "RJ", "RN", "RO", "RR", "SC", "SE", "TO"],
+  "uf_to_svan": ["MA"]
+}

@@ -36,7 +36,7 @@
     <!-- Importar pela chave de acesso -->
     <div class="bg-white shadow-lg rounded-lg border-2 theme-card p-6 mb-6">
       <h2 class="text-lg font-semibold text-gray-800 mb-3">Ou importar pela chave de acesso</h2>
-      <p class="text-sm text-gray-600 mb-3">Informe os 44 dígitos da chave de acesso da NF-e para buscar e importar automaticamente (requer configuração no servidor).</p>
+      <p class="text-sm text-gray-600 mb-3">Informe os 44 dígitos da chave de acesso da NF-e para buscar via SEFAZ (requer certificado A1 em Administração > Configuração SEFAZ).</p>
       <form @submit.prevent="importByKey" class="flex flex-wrap items-end gap-4">
         <div class="flex-1 min-w-[280px]">
           <input
@@ -56,6 +56,7 @@
         </button>
       </form>
       <p v-if="byKeyError" class="mt-2 text-sm text-red-600">{{ byKeyError }}</p>
+      <p v-if="byKeySuccess" class="mt-2 text-sm text-green-600">{{ byKeySuccess }}</p>
     </div>
 
     <!-- Lista de importações -->
@@ -168,6 +169,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { nfeService } from '@/services/nfe'
+import { fiscalService } from '@/services/fiscal'
 import { productsService } from '@/services/products'
 
 const fileInput = ref(null)
@@ -177,6 +179,7 @@ const uploadError = ref('')
 const accessKeyInput = ref('')
 const loadingByKey = ref(false)
 const byKeyError = ref('')
+const byKeySuccess = ref('')
 const accessKeyDigits = computed(() => (accessKeyInput.value || '').replace(/\D/g, ''))
 const imports = ref([])
 const products = ref([])
@@ -210,12 +213,14 @@ async function importByKey() {
   if (accessKeyDigits.value.length !== 44) return
   loadingByKey.value = true
   byKeyError.value = ''
+  byKeySuccess.value = ''
   try {
-    const res = await nfeService.importByKey(accessKeyInput.value)
-    imports.value = [res.data, ...imports.value]
+    await fiscalService.importByKey(accessKeyInput.value)
+    byKeySuccess.value = 'NF-e enviada para importação via SEFAZ. O processamento ocorre em segundo plano.'
     accessKeyInput.value = ''
+    setTimeout(() => { byKeySuccess.value = '' }, 5000)
   } catch (err) {
-    byKeyError.value = err.response?.data?.error || 'Erro ao importar pela chave'
+    byKeyError.value = err.response?.data?.error || 'Erro ao importar pela chave. Verifique o certificado em Administração > Configuração SEFAZ.'
   } finally {
     loadingByKey.value = false
   }

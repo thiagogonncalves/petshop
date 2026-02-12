@@ -27,14 +27,14 @@
 
     <!-- Campo de busca -->
     <div class="mb-4">
-      <div class="relative w-full sm:max-w-md">
+      <div class="relative w-full max-w-md">
         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
         </svg>
         <input
           v-model="searchQuery"
           type="text"
-          placeholder="Buscar por nome, código, categoria, custo, preço, estoque ou status..."
+          placeholder="Buscar produtos..."
           class="w-full pl-10 pr-4 py-2.5 rounded-lg border-2 border-gray-200 focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-none transition-colors"
         />
         <button
@@ -53,23 +53,23 @@
 
     <!-- Tabela de Produtos (scroll horizontal em mobile) -->
     <div class="bg-white shadow-lg rounded-lg overflow-x-auto border-2 theme-card -mx-3 sm:mx-0">
-      <table class="min-w-[640px] sm:min-w-full divide-y divide-gray-200">
+      <table class="min-w-[900px] w-full divide-y divide-gray-200">
         <thead class="theme-table-header">
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-14">Foto</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Código</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Categoria</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Custo</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Preço</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Estoque</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Status</th>
-            <th class="px-4 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap sticky right-0 bg-orange-400 z-10">Ações</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-14 sm:w-16">Foto</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20 sm:w-24">Código</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Nome</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-24">Categoria</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20">Custo</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20">Preço</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-28 min-w-[100px]">Estoque</th>
+            <th class="px-3 py-3 text-left text-xs font-medium text-white uppercase tracking-wider w-20">Status</th>
+            <th class="px-3 py-3 text-right text-xs font-medium text-white uppercase tracking-wider whitespace-nowrap w-36 min-w-[140px]">Ações</th>
           </tr>
         </thead>
         <tbody class="bg-white divide-y divide-gray-200">
           <tr v-for="product in products" :key="product.id" class="hover:bg-orange-50/50">
-            <td class="px-2 py-2 whitespace-nowrap">
+            <td class="px-3 py-3 whitespace-nowrap">
               <div class="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden">
                 <img v-if="product.image_url" :src="product.image_url" :alt="product.name" class="w-full h-full object-cover" />
                 <svg v-else class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
@@ -77,23 +77,27 @@
                 </svg>
               </div>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.sku || '-' }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ product.name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ product.category_name }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.cost_price) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.sale_price) }}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm">
+            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">{{ product.sku || '-' }}</td>
+            <td class="px-3 py-3 text-sm font-medium text-gray-900">
+              {{ product.name }}
+            </td>
+            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">{{ product.category_name }}</td>
+            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.cost_price) }}</td>
+            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">R$ {{ formatPrice(product.sale_price) }}</td>
+            <td class="px-3 py-3 whitespace-nowrap text-sm min-w-[90px]">
               <span :class="product.is_low_stock ? 'text-red-600 font-semibold' : 'text-gray-500'">
-                {{ product.unit === 'KG' ? (product.stock_quantity / 1000).toFixed(3) : product.stock_quantity }} {{ product.unit === 'KG' ? 'kg' : product.unit }}
+                <template v-if="product.unit === 'KG'">{{ (product.stock_quantity / 1000).toFixed(3) }} kg</template>
+                <template v-else-if="product.unit === 'PKG' && product.units_per_package">{{ Math.floor(product.stock_quantity / product.units_per_package) }} pac ({{ product.stock_quantity }} un)</template>
+                <template v-else>{{ product.stock_quantity }} {{ product.unit }}</template>
               </span>
             </td>
-            <td class="px-6 py-4 whitespace-nowrap">
+            <td class="px-3 py-3 whitespace-nowrap text-sm">
               <span :class="product.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'" 
                     class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full">
                 {{ product.is_active ? 'Ativo' : 'Inativo' }}
               </span>
             </td>
-            <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-right sticky right-0 bg-white z-10 border-l border-gray-200">
+            <td class="px-3 py-3 whitespace-nowrap text-sm font-medium text-right">
               <button type="button" :disabled="!subscriptionStore.canWrite" class="mr-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700 font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed" @click="openModal(product)">
                 Editar
               </button>
@@ -224,7 +228,7 @@
                      @input="onMarginChange">
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Preço produto fechado (R$)' : 'Preço de Venda (R$)' }}</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Preço produto fechado (R$)' : (form.unit === 'PKG' ? 'Preço por unidade (R$)' : 'Preço de Venda (R$)') }}</label>
               <input v-model.number="form.sale_price" type="number" step="0.01" min="0.01" required
                      :readonly="pricingMode === 'margin'"
                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -239,26 +243,35 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-4 mb-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Estoque (kg)' : 'Estoque' }}</label>
-              <input v-model="form.stock_quantity" type="number" :step="form.unit === 'KG' ? 0.001 : 1" min="0" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Estoque Mínimo</label>
-              <input v-model="form.min_stock" type="number" min="0" required
-                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
-            </div>
-          </div>
-
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
             <select v-model="form.unit"
                     class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
               <option value="UN">Unidade</option>
               <option value="KG">Quilograma (kg)</option>
+              <option value="PKG">Pacote</option>
             </select>
+          </div>
+          <div v-if="form.unit === 'PKG'" class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Unidades por pacote</label>
+            <input v-model.number="form.units_per_package" type="number" min="1" step="1" required
+                   placeholder="Ex: 12"
+                   class="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            <p class="text-xs text-gray-500 mt-0.5">Quantas unidades formam 1 pacote. Estoque = pacotes × unidades. Preço de venda é por unidade.</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'KG' ? 'Estoque (kg)' : (form.unit === 'PKG' ? 'Pacotes em estoque' : 'Estoque') }}</label>
+              <input v-model="form.stock_quantity" type="number" :step="form.unit === 'KG' ? 0.001 : 1" min="0" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">{{ form.unit === 'PKG' ? 'Estoque mínimo (unidades)' : 'Estoque Mínimo' }}</label>
+              <input v-model="form.min_stock" type="number" min="0" required
+                     class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+              <p v-if="form.unit === 'PKG' && form.units_per_package" class="text-xs text-gray-500 mt-0.5">Mínimo de unidades no estoque ({{ form.units_per_package }} un/pacote)</p>
+            </div>
           </div>
 
           <div class="mb-4">
@@ -352,6 +365,7 @@ const form = ref({
   stock_quantity: 0,
   min_stock: 0,
   unit: 'UN',
+  units_per_package: null,
   is_active: true,
 })
 
@@ -473,9 +487,10 @@ const openModal = (product = null) => {
       sale_price: product.sale_price ?? 0,
       price_manually_set: priceManually,
       price_per_kg: product.price_per_kg ?? null,
-      stock_quantity: unit === 'KG' ? ((product.stock_quantity ?? 0) / 1000) : (product.stock_quantity ?? 0),
-      min_stock: product.min_stock ?? 0,
+      stock_quantity: unit === 'KG' ? ((product.stock_quantity ?? 0) / 1000) : (unit === 'PKG' && product.units_per_package ? Math.floor((product.stock_quantity ?? 0) / product.units_per_package) : (product.stock_quantity ?? 0)),
+      min_stock: unit === 'PKG' ? (product.min_stock ?? 0) : (product.min_stock ?? 0),
       unit,
+      units_per_package: product.units_per_package ?? null,
       is_active: product.is_active !== false,
     }
     pricingMode.value = priceManually ? 'price' : 'margin'
@@ -497,6 +512,7 @@ const openModal = (product = null) => {
       stock_quantity: 0,
       min_stock: 0,
       unit: 'UN',
+      units_per_package: null,
       is_active: true,
     }
     pricingMode.value = 'margin'
@@ -559,9 +575,10 @@ const saveProduct = async () => {
       sale_price: parseFloat(form.value.sale_price) || 0.01,
       price_manually_set: pricingMode.value === 'price',
       price_per_kg: unit === 'KG' ? (parseFloat(form.value.price_per_kg) || null) : null,
-      stock_quantity: unit === 'KG' ? Math.round(stockVal * 1000) : Math.max(0, parseInt(stockVal) || 0),
+      stock_quantity: unit === 'KG' ? Math.round(stockVal * 1000) : (unit === 'PKG' ? Math.max(0, (parseInt(stockVal) || 0) * (parseInt(form.value.units_per_package) || 1)) : Math.max(0, parseInt(stockVal) || 0)),
       min_stock: parseInt(form.value.min_stock) || 0,
       unit,
+      units_per_package: unit === 'PKG' ? (parseInt(form.value.units_per_package) || 1) : null,
       is_active: form.value.is_active !== false,
     }
     if (imageFile.value) {

@@ -139,13 +139,25 @@ class PdvSaleItemInputSerializer(serializers.Serializer):
     )
 
 
+class PdvSalePaymentInputSerializer(serializers.Serializer):
+    """Uma parcela de pagamento: forma + valor."""
+    payment_method = serializers.ChoiceField(
+        choices=[c for c in Sale.PAYMENT_METHOD_CHOICES if c[0] not in ('crediario', 'mixed')]
+    )
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, min_value=Decimal('0.01'))
+
+
 class PdvSaleCreateSerializer(serializers.Serializer):
     """Create and finalize a PDV sale in one request."""
     cpf = serializers.CharField(required=False, allow_blank=True)
     client_cpf = serializers.CharField(required=False, allow_blank=True)
     is_walk_in = serializers.BooleanField(default=False)
     items = PdvSaleItemInputSerializer(many=True)
-    payment_method = serializers.ChoiceField(choices=Sale.PAYMENT_METHOD_CHOICES)
+    payment_method = serializers.ChoiceField(
+        choices=Sale.PAYMENT_METHOD_CHOICES,
+        required=False,
+    )
+    payments = PdvSalePaymentInputSerializer(many=True, required=False)
     discount = serializers.DecimalField(
         max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
         required=False, default=Decimal('0.00')
@@ -159,6 +171,14 @@ class PdvSaleCreateSerializer(serializers.Serializer):
         min_value=1, max_value=12, required=False
     )
     first_due_date = serializers.DateField(required=False)
+    change_amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
+        required=False, default=Decimal('0.00')
+    )
+    cash_received = serializers.DecimalField(
+        max_digits=10, decimal_places=2, min_value=Decimal('0.00'),
+        required=False, allow_null=True
+    )
 
     def validate_items(self, value):
         if not value:
@@ -166,7 +186,25 @@ class PdvSaleCreateSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        payments = attrs.get('payments') or []
         payment_method = attrs.get('payment_method')
+        if payments:
+            if payment_method == 'crediario':
+                raise serializers.ValidationError({
+                    'payments': 'Pagamento fracionado não permitido com crediário.'
+                })
+            total_paid = sum(Decimal(str(p['amount'])) for p in payments)
+            if total_paid <= 0:
+                raise serializers.ValidationError({
+                    'payments': 'Informe pelo menos um pagamento com valor maior que zero.'
+                })
+            attrs['_payments_total'] = total_paid
+        else:
+            if not payment_method:
+                raise serializers.ValidationError({
+                    'payment_method': 'Informe a forma de pagamento ou os pagamentos fracionados.'
+                })
+        payment_method = payment_method or (payments[0]['payment_method'] if payments else None)
         is_walk_in = attrs.get('is_walk_in', True)
 
         if payment_method == 'crediario':

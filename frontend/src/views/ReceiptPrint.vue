@@ -34,7 +34,15 @@
       <hr class="receipt-hr" />
       <div class="receipt-client">
         <p>{{ receipt.client }}</p>
-        <p>Pagamento: {{ receipt.payment_method }}</p>
+        <div v-if="receipt.payment_breakdown?.length">
+          <p>Pagamento:</p>
+          <p v-for="(p, i) in receipt.payment_breakdown" :key="i" class="receipt-payment-line">
+            {{ p.method }}: R$ {{ String(p.amount).replace('.', ',') }}
+          </p>
+        </div>
+        <p v-else>Pagamento: {{ receipt.payment_method }}</p>
+        <p v-if="receipt.cash_received">Valor recebido: R$ {{ String(receipt.cash_received).replace('.', ',') }}</p>
+        <p v-if="receipt.change_amount" class="receipt-change">Troco: R$ {{ String(receipt.change_amount).replace('.', ',') }}</p>
       </div>
       <div class="receipt-footer">
         <p>Obrigado pela preferência!</p>
@@ -62,6 +70,8 @@ const receipt = ref({
   total: '0.00',
   client: 'Venda avulsa',
   payment_method: '-',
+  change_amount: null,
+  cash_received: null,
 })
 const loading = ref(true)
 const error = ref('')
@@ -97,6 +107,9 @@ function loadReceipt(id) {
       total: data.total || '0.00',
       client: data.client || 'Venda avulsa',
       payment_method: data.payment_method || '-',
+      payment_breakdown: data.payment_breakdown || null,
+      change_amount: data.change_amount || null,
+      cash_received: data.cash_received || null,
     }
     loading.value = false
     setTimeout(() => {
@@ -235,6 +248,11 @@ watch(() => route.params.id, (id) => {
 
 .receipt-client p {
   margin: 2px 0;
+}
+
+.receipt-change {
+  font-weight: bold;
+  margin-top: 6px !important;
 }
 
 .receipt-footer {

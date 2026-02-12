@@ -1,4 +1,10 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks:
+      - internal
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -37,15 +43,73 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost}
       MERCADOPAGO_ACCESS_TOKEN: ${MERCADOPAGO_ACCESS_TOKEN:-}
       MERCADOPAGO_WEBHOOK_URL: ${MERCADOPAGO_WEBHOOK_URL:-}
+      MERCADOPAGO_WEBHOOK_SECRET: ${MERCADOPAGO_WEBHOOK_SECRET:-}
       NFE_FETCH_XML_URL_TEMPLATE: ${NFE_FETCH_XML_URL_TEMPLATE:-}
+      DJANGO_FISCAL_ENCRYPTION_KEY: ${DJANGO_FISCAL_ENCRYPTION_KEY:-}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./media:/app/media
     networks:
       - internal
       - proxy
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A core worker -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      SECRET_KEY: ${SECRET_KEY}
+      DB_NAME: ${DB_NAME:-petshop_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DJANGO_FISCAL_ENCRYPTION_KEY: ${DJANGO_FISCAL_ENCRYPTION_KEY:-}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - internal
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A core beat -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: core.settings.production
+      SECRET_KEY: ${SECRET_KEY}
+      DB_NAME: ${DB_NAME:-petshop_db}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DJANGO_FISCAL_ENCRYPTION_KEY: ${DJANGO_FISCAL_ENCRYPTION_KEY:-}
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      celery_worker:
+        condition: service_started
+    networks:
+      - internal
 
   frontend:
     build:

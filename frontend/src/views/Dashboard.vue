@@ -1,6 +1,5 @@
 <template>
   <div class="min-h-screen flex flex-col">
-    <SubscriptionAlert />
     <div class="max-w-7xl mx-auto px-4 sm:px-6 flex-1 w-full pb-4">
       <div v-if="loading" class="grid gap-6">
         <div class="h-64 bg-gray-200 rounded-xl animate-pulse"></div>
@@ -26,7 +25,6 @@ import { dashboardService } from '@/services/dashboard'
 import { schedulingService } from '@/services/scheduling'
 import TodaySchedule from '@/components/dashboard/TodaySchedule.vue'
 import DailyInsights from '@/components/dashboard/DailyInsights.vue'
-import SubscriptionAlert from '@/components/SubscriptionAlert.vue'
 
 const data = ref(null)
 const loading = ref(true)

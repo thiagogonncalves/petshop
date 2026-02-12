@@ -4,13 +4,14 @@ Sales views
 import re
 from django.db.models import Q
 from rest_framework import viewsets, status
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import Sum
 from datetime import datetime, timedelta
-from .models import Sale, SaleItem, Receipt, Invoice, CreditAccount, CreditInstallment
+from .models import Sale, SaleItem, SalePayment, Receipt, Invoice, CreditAccount, CreditInstallment
 from .serializers import (
     SaleSerializer, SaleCreateSerializer,
     SaleItemSerializer, ReceiptSerializer, InvoiceSerializer,
@@ -81,6 +82,9 @@ class SaleViewSet(viewsets.ModelViewSet):
                     previous_stock = product.stock_quantity
                     if product.unit == 'KG' and getattr(item, 'sold_by_kg', False):
                         stock_delta = int(round(float(item.quantity) * 1000))
+                    elif product.unit == 'PKG' and product.units_per_package:
+                        qty_pac = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
+                        stock_delta = qty_pac * product.units_per_package
                     else:
                         stock_delta = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
                     new_stock = previous_stock - stock_delta
@@ -148,7 +152,12 @@ class SaleViewSet(viewsets.ModelViewSet):
         cpf_digits = re.sub(r'[^0-9]', '', cpf_raw)
         is_walk_in = data.get('is_walk_in', True)
         items_data = data['items']
-        payment_method = data['payment_method']
+        payments_data = data.get('payments') or []
+        payment_method = data.get('payment_method')
+        if payments_data:
+            payment_method = 'mixed'
+        else:
+            payment_method = payment_method or 'cash'
 
         client = None
         cpf_saved = ''
@@ -168,6 +177,8 @@ class SaleViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             sale_status = 'paid' if payment_method != 'crediario' else 'credit_open'
             sale_discount = data.get('discount') or 0
+            change_amount = data.get('change_amount') or 0
+            cash_received = data.get('cash_received')
             sale = Sale.objects.create(
                 client=client,
                 is_walk_in=is_walk_in,
@@ -176,6 +187,8 @@ class SaleViewSet(viewsets.ModelViewSet):
                 total=0,
                 payment_method=payment_method,
                 status=sale_status,
+                change_amount=change_amount,
+                cash_received=cash_received,
                 created_by=request.user,
             )
             for item_data in items_data:
@@ -197,6 +210,15 @@ class SaleViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_400_BAD_REQUEST
                         )
                     stock_delta = qty_grams
+                elif product.unit == 'PKG' and product.units_per_package:
+                    qty_packages = int(qty) if qty == int(qty) else int(round(float(qty)))
+                    stock_delta = qty_packages * product.units_per_package
+                    if product.stock_quantity < stock_delta:
+                        disp_pac = product.stock_quantity // product.units_per_package
+                        return Response(
+                            {'items': f'Estoque insuficiente para {product.name}. Disponível: {disp_pac} pacote(s)'},
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
                 else:
                     qty_int = int(qty) if qty == int(qty) else int(round(float(qty)))
                     if product.stock_quantity < qty_int:
@@ -231,6 +253,21 @@ class SaleViewSet(viewsets.ModelViewSet):
                 )
             sale.calculate_total()
             sale.save()
+
+            # Pagamentos fracionados (várias formas)
+            if payments_data:
+                from decimal import Decimal
+                payments_total = sum(Decimal(str(p['amount'])) for p in payments_data)
+                if abs(payments_total - sale.total) > Decimal('0.01'):
+                    raise DRFValidationError({
+                        'payments': f'A soma dos pagamentos (R$ {payments_total:.2f}) deve ser igual ao total da venda (R$ {sale.total:.2f}).'
+                    })
+                for p in payments_data:
+                    SalePayment.objects.create(
+                        sale=sale,
+                        payment_method=p['payment_method'],
+                        amount=p['amount'],
+                    )
 
             # Crediário: create CreditAccount and installments
             if payment_method == 'crediario' and client:
@@ -325,6 +362,9 @@ class SaleViewSet(viewsets.ModelViewSet):
                     previous_stock = product.stock_quantity
                     if product.unit == 'KG' and getattr(item, 'sold_by_kg', False):
                         stock_delta = int(round(float(item.quantity) * 1000))
+                    elif product.unit == 'PKG' and product.units_per_package:
+                        qty_pac = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
+                        stock_delta = qty_pac * product.units_per_package
                     else:
                         stock_delta = int(item.quantity) if item.quantity == int(item.quantity) else int(round(float(item.quantity)))
                     new_stock = previous_stock + stock_delta
@@ -377,6 +417,17 @@ class SaleViewSet(viewsets.ModelViewSet):
             client_label = f'{sale.client.name} - CPF: {sale.cpf or sale.client.document}'
         elif sale.cpf:
             client_label = f'CPF: {sale.cpf} (avulsa)'
+        breakdown = sale.get_payment_breakdown()
+        choices_map = dict(Sale.PAYMENT_METHOD_CHOICES)
+        if len(breakdown) > 1:
+            payment_label = ', '.join(
+                f"{choices_map.get(p['payment_method'], p['payment_method'])}: R$ {str(p['amount']).replace('.', ',')}"
+                for p in breakdown
+            )
+        elif breakdown:
+            payment_label = f"{choices_map.get(breakdown[0]['payment_method'], breakdown[0]['payment_method'])}: R$ {str(breakdown[0]['amount']).replace('.', ',')}"
+        else:
+            payment_label = sale.get_payment_method_display()
         payload = {
             'sale_id': sale.id,
             'sale_date': sale.sale_date.isoformat() if sale.sale_date else None,
@@ -385,7 +436,13 @@ class SaleViewSet(viewsets.ModelViewSet):
             'discount': str(sale.discount),
             'total': str(sale.total),
             'client': client_label,
-            'payment_method': sale.get_payment_method_display(),
+            'payment_method': payment_label,
+            'change_amount': str(sale.change_amount) if sale.change_amount and float(sale.change_amount) > 0 else None,
+            'cash_received': str(sale.cash_received) if sale.cash_received and float(sale.cash_received) > 0 else None,
+            'payment_breakdown': [
+                {'method': choices_map.get(p['payment_method'], p['payment_method']), 'amount': str(p['amount'])}
+                for p in breakdown
+            ] if len(breakdown) > 1 else [],
         }
         return Response(payload)
 

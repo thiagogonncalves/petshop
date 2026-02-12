@@ -35,12 +35,15 @@ def get_sellers():
 
 
 def _parse_date(value, default):
-    if value is None:
+    if value is None or (isinstance(value, str) and not value.strip()):
         return default
     if isinstance(value, date):
         return value
     from datetime import datetime
-    return datetime.strptime(value, '%Y-%m-%d').date()
+    try:
+        return datetime.strptime(str(value).strip(), '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return default
 
 
 def _sales_queryset(start=None, end=None, user_id=None, client_id=None,

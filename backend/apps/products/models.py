@@ -44,12 +44,20 @@ class Product(models.Model):
     UNIT_CHOICES = [
         ('UN', 'Unidade'),
         ('KG', 'Quilograma (kg)'),
+        ('PKG', 'Pacote'),
     ]
     unit = models.CharField(
         max_length=20,
         choices=UNIT_CHOICES,
         default='UN',
         verbose_name='Unidade'
+    )
+    units_per_package = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(1)],
+        verbose_name='Unidades por pacote',
+        help_text='Quantas unidades formam 1 pacote (obrigatório quando unidade é Pacote)'
     )
 
     # Pricing
@@ -128,6 +136,7 @@ class Product(models.Model):
         """Check if product is below minimum stock"""
         if self.unit == 'KG':
             return (self.stock_quantity / 1000) <= self.min_stock
+        # UN e PKG: stock em unidades/pacotes
         return self.stock_quantity <= self.min_stock
 
     def recalculate_sale_price(self):
